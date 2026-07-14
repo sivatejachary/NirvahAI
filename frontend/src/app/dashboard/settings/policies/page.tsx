@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
 
@@ -83,7 +83,6 @@ export default function PoliciesPage() {
     setSaving(true);
     setError('');
     try {
-          const headers = getHeaders();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/policies/`, {
         method: 'POST', headers: h, body: JSON.stringify(form),
       });
