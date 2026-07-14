@@ -69,8 +69,42 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "hros_dev_password"
     DATABASE_URL: str = "postgresql+asyncpg://hros:hros_dev_password@localhost:5432/hros"
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def parse_database_url(cls, v: Any) -> str:
+        """
+        Coerces postgresql:// or postgres:// database URLs to use postgresql+asyncpg://
+        and prefers DATABASE_PRIVATE_URL or POSTGRES_PRIVATE_URL if set.
+        """
+        import os
+        private_url = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("POSTGRES_PRIVATE_URL")
+        url = private_url or v
+
+        if not url or not isinstance(url, str):
+            return url
+
+        url = url.strip()
+        # Ensure asyncpg is specified for postgresql/postgres URLs
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+
+        return url
+
     # ── Redis ─────────────────────────────────────────────────────────────────
     REDIS_URL: str = "redis://localhost:6379/0"
+
+    @field_validator("REDIS_URL", mode="before")
+    @classmethod
+    def parse_redis_url(cls, v: Any) -> str:
+        """
+        Prefers REDIS_PRIVATE_URL if set in the environment.
+        """
+        import os
+        private_url = os.environ.get("REDIS_PRIVATE_URL")
+        url = private_url or v
+        return url.strip() if isinstance(url, str) else url
 
     # ── Qdrant ───────────────────────────────────────────────────────────────
     QDRANT_HOST: str = "localhost"
