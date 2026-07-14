@@ -26,6 +26,8 @@ class Settings(BaseSettings):
         "http://192.168.1.28:3000",
         "http://192.168.1.28:3001",
         "https://vidyamarg-ai.vercel.app",
+        "https://nirvah-ai-ruby.vercel.app",
+        "https://nirvahai-production.up.railway.app",
     ]
 
     # ── PostgreSQL ────────────────────────────────────────────────────────────
