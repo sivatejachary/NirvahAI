@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── Environment Variables ──────────────────────────────────────────────────────
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8000
+    PORT=8080
 
 # ── Working Directory ──────────────────────────────────────────────────────────
 WORKDIR /app
@@ -35,7 +35,7 @@ COPY scripts/ ./scripts/
 
 # ── Ports & Startup ────────────────────────────────────────────────────────────
 # Expose default port
-EXPOSE 8000
+EXPOSE 8080
 
 # Start server reading PORT from environment variable (Railway overrides this dynamically)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
