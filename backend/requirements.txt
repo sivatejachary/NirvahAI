@@ -33,7 +33,6 @@ langgraph>=0.1.0
 # Document parsing
 pdfplumber>=0.11.0
 python-docx>=1.1.0
-python-magic>=0.4.27
 
 # Temporal
 temporalio>=1.6.0
