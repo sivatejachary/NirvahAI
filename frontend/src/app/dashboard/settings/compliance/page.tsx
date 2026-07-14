@@ -154,6 +154,7 @@ export default function ComplianceSettingsPage() {
     setSuccess('');
     
     try {
+      const headers = getHeaders();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/compliance/privacy-requests/${requestId}/execute`, {
         method: 'POST',
         headers,
