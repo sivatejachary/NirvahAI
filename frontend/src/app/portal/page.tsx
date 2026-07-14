@@ -76,6 +76,19 @@ export default function CandidatePortalPage() {
     setLoading(true);
     setErrorMsg('');
     try {
+      // Log candidate consent first
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/consent/by-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Slug': tenantSlug },
+        body: JSON.stringify({
+          candidate_email: email.trim(),
+          workflow_stage: 'APPLICATION',
+          consent_status: true,
+          consent_method: 'WEB_FORM',
+          verification_metadata: { auto_granted_on_submit: true }
+        }),
+      });
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/applications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-Slug': tenantSlug },

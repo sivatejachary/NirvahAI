@@ -144,22 +144,7 @@ async def public_submit_application(
 ):
     """
     Candidate submit application endpoint. Resolves Tenant context from X-Tenant-Slug.
-    Consent is automatically granted on submit if not already recorded (opt-in via form checkbox).
     """
-    # Auto-grant consent if they're submitting (they checked the box in the form)
-    candidate_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, str(body.candidate_email))
-    try:
-        await compliance_svc.log_consent(
-            db,
-            tenant_id=tenant_id,
-            candidate_id=str(candidate_uuid),
-            workflow_stage="APPLICATION",
-            consent_status=True,
-            consent_method="WEB_FORM",
-            verification_metadata={"auto_granted_on_submit": True},
-        )
-    except Exception:
-        pass  # If consent already exists, that's fine
 
     try:
         application = await ApplicationService.submit_application(
