@@ -1,0 +1,27 @@
+# Ignore python compilation artifacts
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Ignore database and cache files
+*.db
+*.sqlite3
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ignore local secret configurations and IDE configurations
+.env
+.env.local
+.idea/
+.vscode/
+
+# Ignore log files
+*.log
+*.txt
