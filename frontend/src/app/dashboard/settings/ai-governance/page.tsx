@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
 
@@ -50,6 +50,7 @@ export default function AIGovernancePage() {
 
   const loadData = async () => {
     try {
+      const headers = getHeaders();
       // 1. Fetch budgets from hiring-rules
       const settingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/hiring-rules`, { headers });
       if (settingsRes.ok) {
