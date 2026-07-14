@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 
@@ -26,7 +26,6 @@ export default function IntegrationsPage() {
   const h = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   useEffect(() => {
-        const headers = getHeaders();
     // TODO: Fetch configured integrations from API
     setLoading(false);
   }, []);

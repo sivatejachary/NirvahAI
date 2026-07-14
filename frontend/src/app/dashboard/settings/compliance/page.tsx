@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
 
@@ -50,6 +50,7 @@ export default function ComplianceSettingsPage() {
 
   const loadData = async () => {
     try {
+      const headers = getHeaders();
       const [profileRes, requestsRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/compliance/profile`, { headers }),
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/compliance/accommodations`, { headers }), // Fetch accommodations (mocking table if not loaded, or get privacy requests)

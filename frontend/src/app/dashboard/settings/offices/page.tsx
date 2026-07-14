@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
 
@@ -39,6 +39,7 @@ export default function OfficesPage() {
 
   const fetchOffices = () => {
     setLoading(true);
+    const headers = getHeaders();
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/offices`, { headers })
       .then(r => r.json()).then(setOffices).catch(() => setOffices([]))
       .finally(() => setLoading(false));

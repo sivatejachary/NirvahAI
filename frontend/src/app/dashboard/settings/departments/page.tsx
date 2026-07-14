@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
 
@@ -27,6 +27,7 @@ export default function DepartmentsPage() {
 
   const fetchDepts = () => {
     setLoading(true);
+    const headers = getHeaders();
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/departments`, { headers })
       .then(r => r.json())
       .then(root => {

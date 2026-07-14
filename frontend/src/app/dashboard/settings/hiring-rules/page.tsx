@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
 
@@ -51,7 +51,6 @@ export default function HiringRulesPage() {
   const h = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   useEffect(() => {
-        const headers = getHeaders();
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/profile`, { headers: h })
       .then(r => r.json())
       .then(d => setRules(prev => ({ ...prev, ...d })))
