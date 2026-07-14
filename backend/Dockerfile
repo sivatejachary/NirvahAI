@@ -1,6 +1,9 @@
 # HR Agent Backend — Dockerfile for Production Deployment
 FROM python:3.12-slim
 
+# Cache bust — increment to force full rebuild
+ARG CACHEBUST=2
+
 # ── Environment Variables ──────────────────────────────────────────────────────
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
