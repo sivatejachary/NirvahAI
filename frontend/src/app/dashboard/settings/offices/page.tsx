@@ -67,6 +67,7 @@ export default function OfficesPage() {
   };
 
   const handleDeactivate = async (id: string) => {
+    const headers = getHeaders();
     await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/offices/${id}`, {
       method: 'PATCH', headers, body: JSON.stringify({ is_active: false }),
     });
