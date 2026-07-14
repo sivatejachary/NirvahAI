@@ -79,7 +79,8 @@ class Settings(BaseSettings):
         import os
         use_public = os.environ.get("USE_PUBLIC_URLS", "").lower() == "true" or os.environ.get("USE_PUBLIC_DB", "").lower() == "true"
         if use_public:
-            url = v
+            public_url = os.environ.get("DATABASE_PUBLIC_URL") or os.environ.get("POSTGRES_PUBLIC_URL")
+            url = public_url or v
         else:
             private_url = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("POSTGRES_PRIVATE_URL")
             url = private_url or v
@@ -108,7 +109,8 @@ class Settings(BaseSettings):
         import os
         use_public = os.environ.get("USE_PUBLIC_URLS", "").lower() == "true" or os.environ.get("USE_PUBLIC_REDIS", "").lower() == "true"
         if use_public:
-            url = v
+            public_url = os.environ.get("REDIS_PUBLIC_URL") or os.environ.get("REDIS_URL")
+            url = public_url or v
         else:
             private_url = os.environ.get("REDIS_PRIVATE_URL")
             url = private_url or v
