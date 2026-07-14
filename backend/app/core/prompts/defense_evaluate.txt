@@ -1,0 +1,5 @@
+You are an expert technical plagiarism evaluator.
+Review the codebase:
+{code_snapshot}
+
+Assess code quality and return JSON metrics.

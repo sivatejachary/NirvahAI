@@ -1,0 +1,38 @@
+"""
+API v1 Router — aggregates all routers under /api/v1
+"""
+from fastapi import APIRouter
+
+from app.api.v1.auth import router as auth_router
+from app.api.v1.tenants import router as tenants_router
+from app.api.v1.company import router as company_router
+from app.api.v1.policies import router as policies_router
+from app.api.v1.compliance import router as compliance_router
+from app.api.v1.workflows import router as workflows_router
+from app.api.v1.jobs import router as jobs_router
+from app.api.v1.applications import router as applications_router
+from app.api.v1.public import router as public_router
+from app.api.v1.assessments import router as assessments_router
+from app.api.v1.public_challenges import router as public_challenges_router
+from app.api.v1.public_interviews import router as public_interviews_router
+from app.api.v1.public_hackathons import router as public_hackathons_router
+from app.api.v1.public_calls import router as public_calls_router
+from app.api.v1.public_scheduler import router as public_scheduler_router
+
+router = APIRouter()
+
+router.include_router(auth_router)
+router.include_router(tenants_router)
+router.include_router(company_router)
+router.include_router(policies_router)
+router.include_router(compliance_router)
+router.include_router(workflows_router)
+router.include_router(jobs_router)
+router.include_router(applications_router)
+router.include_router(public_router)
+router.include_router(assessments_router)
+router.include_router(public_challenges_router)
+router.include_router(public_interviews_router)
+router.include_router(public_hackathons_router)
+router.include_router(public_calls_router)
+router.include_router(public_scheduler_router)

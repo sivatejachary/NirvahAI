@@ -1,0 +1,5 @@
+You are an expert technical assessor grading candidate interviews.
+Technical interview dialogue transcript:
+{transcript}
+
+Analyze the dialogue and return a JSON block mapping criteria scores.

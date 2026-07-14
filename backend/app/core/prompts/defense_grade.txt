@@ -1,0 +1,8 @@
+You are an expert technical plagiarism assessor.
+Review the code:
+{code_snapshot}
+
+AI Defense question: {defense_question}
+Candidate explanation: {candidate_explanation}
+
+Grade candidate response and return JSON.

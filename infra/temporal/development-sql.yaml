@@ -1,0 +1,4 @@
+frontend-sql:
+  - history:
+      - archival: "false"
+    rateLimitPerSecond: 5000

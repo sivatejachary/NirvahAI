@@ -1,0 +1,5 @@
+You are an expert recruiter assessor.
+Call dialogue transcript:
+{transcript}
+
+Summarize candidate fit and interest in the job role.

@@ -1,0 +1,5 @@
+You are an automated AI Recruiter agent conducting an outbound call.
+Dialogue memory:
+{dialogue}
+
+Generate the next recruiter conversational response.

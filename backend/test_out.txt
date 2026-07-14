@@ -1,0 +1,1660 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\Shiva\AppData\Local\Programs\Python\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Hr Agent\backend
+configfile: pytest.ini
+plugins: anyio-4.14.1, Faker-40.28.1, langsmith-0.10.2, asyncio-1.4.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/test_call_pipeline.py::test_recruiter_call_lifecycle ERROR         [100%]
+
+=================================== ERRORS ====================================
+_______________ ERROR at setup of test_recruiter_call_lifecycle _______________
+
+self = <Coroutine test_recruiter_call_lifecycle>
+
+    def setup(self) -> None:
+        runner_fixture_id = f"_{self._loop_scope}_scoped_runner"
+        if runner_fixture_id not in self.fixturenames:
+            self.fixturenames.append(runner_fixture_id)
+        # When loop factories are configured, resolve the loop factory
+        # fixture early so that a factory variant change cascades cache
+        # invalidation before any async fixture checks its cache.
+        hook_caller = self.config.hook.pytest_asyncio_loop_factories
+        if hook_caller.get_hookimpls():
+            _ = self._request.getfixturevalue(_asyncio_loop_factory.__name__)
+>       return super().setup()
+               ^^^^^^^^^^^^^^^
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+fixturedef = <FixtureDef argname='setup_test_db' scope='session' baseid='tests'>
+request = <SubRequest 'setup_test_db' for <Coroutine test_recruiter_call_lifecycle>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+                return (yield)
+        default_loop_scope = request.config.getini("asyncio_default_fixture_loop_scope")
+        loop_scope = (
+            getattr(fixturedef.func, "_loop_scope", None)
+            or default_loop_scope
+            or fixturedef.scope
+        )
+        runner_fixture_id = f"_{loop_scope}_scoped_runner"
+        runner = request.getfixturevalue(runner_fixture_id)
+        # Prevent the runner closing before the fixture's async teardown.
+        runner_fixturedef = request._get_active_fixturedef(runner_fixture_id)
+        runner_fixturedef.addfinalizer(
+            functools.partial(fixturedef.finish, request=request)
+        )
+        synchronizer = _fixture_synchronizer(fixturedef, runner, request)
+        _make_asyncio_fixture_function(synchronizer, loop_scope)
+        with MonkeyPatch.context() as c:
+            c.setattr(fixturedef, "func", synchronizer)
+>           hook_result = yield
+                          ^^^^^
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:944: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (), kwargs = {}
+
+    @functools.wraps(fixture_function)
+    def _asyncgen_fixture_wrapper(
+        *args: AsyncGenFixtureParams.args,
+        **kwargs: AsyncGenFixtureParams.kwargs,
+    ):
+        gen_obj = fixture_function(*args, **kwargs)
+    
+        async def setup():
+            res = await gen_obj.__anext__()
+            return res
+    
+        context = contextvars.copy_context()
+>       result = runner.run(setup(), context=context)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:407: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <asyncio.runners.Runner object at 0x0000026E8F457C50>
+coro = <coroutine object _wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.setup at 0x0000026E8F3B3510>
+context = <_contextvars.Context object at 0x0000026E8F4928C0>
+
+    def run(self, coro, *, context=None):
+        """Run a coroutine inside the embedded event loop."""
+        if not coroutines.iscoroutine(coro):
+            raise ValueError("a coroutine was expected, got {!r}".format(coro))
+    
+        if events._get_running_loop() is not None:
+            # fail fast with short traceback
+            raise RuntimeError(
+                "Runner.run() cannot be called from a running event loop")
+    
+        self._lazy_init()
+    
+        if context is None:
+            context = self._context
+        task = self._loop.create_task(coro, context=context)
+    
+        if (threading.current_thread() is threading.main_thread()
+            and signal.getsignal(signal.SIGINT) is signal.default_int_handler
+        ):
+            sigint_handler = functools.partial(self._on_sigint, main_task=task)
+            try:
+                signal.signal(signal.SIGINT, sigint_handler)
+            except ValueError:
+                # `signal.signal` may throw if `threading.main_thread` does
+                # not support signals (e.g. embedded interpreter with signals
+                # not registered - see gh-91880)
+                sigint_handler = None
+        else:
+            sigint_handler = None
+    
+        self._interrupt_count = 0
+        try:
+>           return self._loop.run_until_complete(task)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ProactorEventLoop running=False closed=False debug=False>
+future = <Task finished name='Task-1' coro=<_wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.setup() done, de...bound method ColumnOperators.asc of <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x0000026E8DD9AB60>>.")>
+
+    def run_until_complete(self, future):
+        """Run until the Future is done.
+    
+        If the argument is a coroutine, it is wrapped in a Task.
+    
+        WARNING: It would be disastrous to call run_until_complete()
+        with the same coroutine twice -- it would wrap it in two
+        different Tasks and that can't be good.
+    
+        Return the Future's result, or raise its exception.
+        """
+        self._check_closed()
+        self._check_running()
+    
+        new_task = not futures.isfuture(future)
+        future = tasks.ensure_future(future, loop=self)
+        if new_task:
+            # An exception is raised if the future didn't complete, so there
+            # is no need to log the "destroy pending task" message
+            future._log_destroy_pending = False
+    
+        future.add_done_callback(_run_until_complete_cb)
+        try:
+            self.run_forever()
+        except:
+            if new_task and future.done() and not future.cancelled():
+                # The coroutine raised a BaseException. Consume the exception
+                # to not log a warning, the caller doesn't have access to the
+                # local task.
+                future.exception()
+            raise
+        finally:
+            future.remove_done_callback(_run_until_complete_cb)
+        if not future.done():
+            raise RuntimeError('Event loop stopped before Future completed.')
+    
+>       return future.result()
+               ^^^^^^^^^^^^^^^
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def setup():
+>       res = await gen_obj.__anext__()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:403: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    @pytest.fixture(scope="session", autouse=True)
+    async def setup_test_db():
+        from app.core.database import engine
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    
+        # Seed roles in SQLite (matching Alembic migrations role seed)
+        from sqlalchemy.ext.asyncio import AsyncSession
+        async with AsyncSession(engine) as session:
+            from app.models.user import Role
+            roles = [
+>               Role(name="platform_admin", display_name="Platform Administrator", is_system_role=True),
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                Role(name="tenant_admin", display_name="Company Administrator", is_system_role=True),
+                Role(name="hr_manager", display_name="HR Manager", is_system_role=True),
+                Role(name="hr_recruiter", display_name="Recruiter", is_system_role=True),
+                Role(name="hiring_manager", display_name="Hiring Manager", is_system_role=True),
+                Role(name="interviewer", display_name="Interviewer", is_system_role=True),
+                Role(name="employee", display_name="Employee", is_system_role=True),
+            ]
+
+tests\conftest.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+mixed = (<sqlalchemy.orm.state.InstanceState object at 0x0000026E8F4239B0>, <Role None>)
+kwargs = {'name': 'platform_admin', 'display_name': 'Platform Administrator', 'is_system_role': True}
+
+    def _initialize_instance(*mixed: Any, **kwargs: Any) -> None:
+        self, instance, args = mixed[0], mixed[1], mixed[2:]  # noqa
+        manager = self.manager
+    
+>       manager.dispatch.init(self, args, kwargs)
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\state.py:591: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.event.attr._ListenerCollection object at 0x0000026E8DBC92D0>
+args = (<sqlalchemy.orm.state.InstanceState object at 0x0000026E8F4239B0>, (), {'name': 'platform_admin', 'display_name': 'Platform Administrator', 'is_system_role': True})
+kw = {}
+
+    def __call__(self, *args: Any, **kw: Any) -> None:
+        """Execute this event."""
+    
+        for fn in self.parent_listeners:
+            fn(*args, **kw)
+        for fn in self.listeners:
+>           fn(*args, **kw)
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\event\attr.py:516: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+state = <sqlalchemy.orm.state.InstanceState object at 0x0000026E8F4239B0>
+args = ()
+kwargs = {'name': 'platform_admin', 'display_name': 'Platform Administrator', 'is_system_role': True}
+
+    def _event_on_init(state, args, kwargs):
+        """Run init_instance hooks.
+    
+        This also includes mapper compilation, normally not needed
+        here but helps with some piecemeal configuration
+        scenarios (such as in the ORM tutorial).
+    
+        """
+    
+        instrumenting_mapper = state.manager.mapper
+        if instrumenting_mapper:
+>           instrumenting_mapper._check_configure()
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\mapper.py:4420: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Mapper at 0x26e8dc102c0; Role>
+
+    @util.langhelpers.tag_method_for_warnings(
+        "This warning originated from the `configure_mappers()` process, "
+        "which was invoked automatically in response to a user-initiated "
+        "operation.",
+        sa_exc.SAWarning,
+    )
+    def _check_configure(self) -> None:
+        if self.registry._new_mappers:
+>           _configure_registries({self.registry}, cascade=True)
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\mapper.py:2411: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+registries = set(), cascade = True
+
+    def _configure_registries(
+        registries: Set[_RegistryType], cascade: bool
+    ) -> None:
+        for reg in registries:
+            if reg._new_mappers:
+                break
+        else:
+            return
+    
+        with _CONFIGURE_MUTEX:
+            global _already_compiling
+            if _already_compiling:
+                return
+            _already_compiling = True
+            try:
+                # double-check inside mutex
+                for reg in registries:
+                    if reg._new_mappers:
+                        break
+                else:
+                    return
+    
+                Mapper.dispatch._for_class(Mapper).before_configured()  # type: ignore # noqa: E501
+                # initialize properties on all mappers
+                # note that _mapper_registry is unordered, which
+                # may randomly conceal/reveal issues related to
+                # the order of mapper compilation
+    
+>               _do_configure_registries(registries, cascade)
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\mapper.py:4228: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+registries = set(), cascade = True
+
+    @util.preload_module("sqlalchemy.orm.decl_api")
+    def _do_configure_registries(
+        registries: Set[_RegistryType], cascade: bool
+    ) -> None:
+        registry = util.preloaded.orm_decl_api.registry
+    
+        orig = set(registries)
+    
+        for reg in registry._recurse_with_dependencies(registries):
+            has_skip = False
+    
+            for mapper in reg._mappers_to_configure():
+                run_configure = None
+    
+                for fn in mapper.dispatch.before_mapper_configured:
+                    run_configure = fn(mapper, mapper.class_)
+                    if run_configure is EXT_SKIP:
+                        has_skip = True
+                        break
+                if run_configure is EXT_SKIP:
+                    continue
+    
+                if getattr(mapper, "_configure_failed", False):
+                    e = sa_exc.InvalidRequestError(
+                        "One or more mappers failed to initialize - "
+                        "can't proceed with initialization of other "
+                        "mappers. Triggering mapper: '%s'. "
+                        "Original exception was: %s"
+                        % (mapper, mapper._configure_failed)
+                    )
+                    e._configure_failed = mapper._configure_failed  # type: ignore
+                    raise e
+    
+                if not mapper.configured:
+                    try:
+>                       mapper._post_configure_properties()
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\mapper.py:4269: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Mapper at 0x26e8dd94800; RecruiterCall>
+
+    def _post_configure_properties(self) -> None:
+        """Call the ``init()`` method on all ``MapperProperties``
+        attached to this mapper.
+    
+        This is a deferred configuration step which is intended
+        to execute once all mappers have been constructed.
+    
+        """
+    
+        self._log("_post_configure_properties() started")
+        l = [(key, prop) for key, prop in self._props.items()]
+        for key, prop in l:
+            self._log("initialize prop %s", key)
+    
+            if prop.parent is self and not prop._configure_started:
+>               prop.init()
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\mapper.py:2428: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_RelationshipDeclared at 0x26e8dd98690; messages>
+
+    def init(self) -> None:
+        """Called after all mappers are created to assemble
+        relationships between mappers and perform other post-mapper-creation
+        initialization steps.
+    
+    
+        """
+        self._configure_started = True
+>       self.do_init()
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\interfaces.py:595: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_RelationshipDeclared at 0x26e8dd98690; messages>
+
+    def do_init(self) -> None:
+        self._check_conflicts()
+>       self._process_dependent_arguments()
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\relationships.py:1655: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_RelationshipDeclared at 0x26e8dd98690; messages>
+
+    def _process_dependent_arguments(self) -> None:
+        """Convert incoming configuration arguments to their
+        proper form.
+    
+        Callables are resolved, ORM annotations removed.
+    
+        """
+    
+        # accept callables for other attributes which may require
+        # deferred initialization.  This technique is used
+        # by declarative "string configs" and some recipes.
+        init_args = self._init_args
+    
+        for attr in (
+            "order_by",
+            "primaryjoin",
+            "secondaryjoin",
+            "secondary",
+            "foreign_keys",
+            "remote_side",
+        ):
+            rel_arg = getattr(init_args, attr)
+    
+            rel_arg._resolve_against_registry(self._clsregistry_resolvers[1])
+    
+        # remove "annotations" which are present if mapped class
+        # descriptors are used to create the join expression.
+        for attr in "primaryjoin", "secondaryjoin":
+            rel_arg = getattr(init_args, attr)
+            val = rel_arg.resolved
+            if val is not None:
+                rel_arg.resolved = _orm_deannotate(
+                    coercions.expect(
+                        roles.ColumnArgumentRole, val, argname=attr
+                    )
+                )
+    
+        secondary = init_args.secondary.resolved
+        if secondary is not None and _is_mapped_class(secondary):
+            raise sa_exc.ArgumentError(
+                "secondary argument %s passed to to relationship() %s must "
+                "be a Table object or other FROM clause; can't send a mapped "
+                "class directly as rows in 'secondary' are persisted "
+                "independently of a class that is mapped "
+                "to that same table." % (secondary, self)
+            )
+    
+        # ensure expressions in self.order_by, foreign_keys,
+        # remote_side are all columns, not strings.
+        if (
+            init_args.order_by.resolved is not False
+            and init_args.order_by.resolved is not None
+        ):
+>           self.order_by = tuple(
+                coercions.expect(
+                    roles.ColumnArgumentRole, x, argname="order_by"
+                )
+                for x in util.to_list(init_args.order_by.resolved)
+            )
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\relationships.py:1726: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+.0 = <list_iterator object at 0x0000026E8F6D6CB0>
+
+    self.order_by = tuple(
+>       coercions.expect(
+            roles.ColumnArgumentRole, x, argname="order_by"
+        )
+        for x in util.to_list(init_args.order_by.resolved)
+    )
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\orm\relationships.py:1727: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+role = <class 'sqlalchemy.sql.roles.ColumnArgumentRole'>
+element = <bound method ColumnOperators.asc of <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x0000026E8DD9AB60>>
+apply_propagate_attrs = None, argname = 'order_by', post_inspect = False
+disable_inspection = False, kw = {}
+
+    def expect(
+        role: Type[_SR],
+        element: Any,
+        *,
+        apply_propagate_attrs: Optional[ClauseElement] = None,
+        argname: Optional[str] = None,
+        post_inspect: bool = False,
+        disable_inspection: bool = False,
+        **kw: Any,
+    ) -> Any:
+        if (
+            role.allows_lambda
+            # note callable() will not invoke a __getattr__() method, whereas
+            # hasattr(obj, "__call__") will. by keeping the callable() check here
+            # we prevent most needless calls to hasattr()  and therefore
+            # __getattr__(), which is present on ColumnElement.
+            and callable(element)
+            and hasattr(element, "__code__")
+        ):
+            return lambdas.LambdaElement(
+                element,
+                role,
+                lambdas.LambdaOptions(**kw),
+                apply_propagate_attrs=apply_propagate_attrs,
+            )
+    
+        # major case is that we are given a ClauseElement already, skip more
+        # elaborate logic up front if possible
+        impl = _impl_lookup[role]
+    
+        original_element = element
+    
+        if not isinstance(
+            element,
+            (
+                elements.CompilerElement,
+                schema.SchemaItem,
+                schema.FetchedValue,
+                lambdas.PyWrapper,
+            ),
+        ):
+            resolved = None
+    
+            if impl._resolve_literal_only:
+                resolved = impl._literal_coercion(element, **kw)
+            else:
+                original_element = element
+    
+                is_clause_element = False
+    
+                # this is a special performance optimization for ORM
+                # joins used by JoinTargetImpl that we don't go through the
+                # work of creating __clause_element__() when we only need the
+                # original QueryableAttribute, as the former will do clause
+                # adaption and all that which is just thrown away here.
+                if (
+                    impl._skip_clauseelement_for_target_match
+                    and isinstance(element, role)
+                    and hasattr(element, "__clause_element__")
+                ):
+                    is_clause_element = True
+                else:
+                    while hasattr(element, "__clause_element__"):
+                        is_clause_element = True
+    
+                        if not getattr(element, "is_clause_element", False):
+                            element = element.__clause_element__()
+                        else:
+                            break
+    
+                if not is_clause_element:
+                    if impl._use_inspection and not disable_inspection:
+                        insp = inspection.inspect(element, raiseerr=False)
+                        if insp is not None:
+                            if post_inspect:
+                                insp._post_inspect
+                            try:
+                                resolved = insp.__clause_element__()
+                            except AttributeError:
+                                impl._raise_for_expected(original_element, argname)
+    
+                    if resolved is None:
+>                       resolved = impl._literal_coercion(
+                            element, argname=argname, **kw
+                        )
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\sql\coercions.py:396: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.sql.coercions.ColumnArgumentImpl object at 0x0000026E8C73F540>
+element = <bound method ColumnOperators.asc of <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x0000026E8DD9AB60>>
+argname = 'order_by', kw = {}
+
+    def _literal_coercion(self, element, *, argname=None, **kw):
+        if isinstance(element, str) and issubclass(
+            elements.TextClause, self._role_class
+        ):
+            _no_text_coercion(element, argname)
+        else:
+>           self._raise_for_expected(element, argname)
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\sql\coercions.py:605: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.sql.coercions.ColumnArgumentImpl object at 0x0000026E8C73F540>
+element = <bound method ColumnOperators.asc of <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x0000026E8DD9AB60>>
+argname = 'order_by', resolved = None, advice = None, code = None, err = None
+kw = {}
+
+    def _raise_for_expected(
+        self,
+        element: Any,
+        argname: Optional[str] = None,
+        resolved: Optional[Any] = None,
+        *,
+        advice: Optional[str] = None,
+        code: Optional[str] = None,
+        err: Optional[Exception] = None,
+        **kw: Any,
+    ) -> NoReturn:
+        if resolved is not None and resolved is not element:
+            got = "%r object resolved from %r object" % (resolved, element)
+        else:
+            got = repr(element)
+    
+        if argname:
+            msg = "%s expected for argument %r; got %s." % (
+                self.name,
+                argname,
+                got,
+            )
+        else:
+            msg = "%s expected, got %s." % (self.name, got)
+    
+        if advice:
+            msg += " " + advice
+    
+>       raise exc.ArgumentError(msg, code=code) from err
+E       sqlalchemy.exc.ArgumentError: Column expression expected for argument 'order_by'; got <bound method ColumnOperators.asc of <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x0000026E8DD9AB60>>.
+
+C:\Users\Shiva\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\sql\coercions.py:519: ArgumentError
+---------------------------- Captured stdout setup ----------------------------
+2026-07-14 11:44:03,871 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-07-14 11:44:03,872 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("audit_logs")
+2026-07-14 11:44:03,872 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,873 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("audit_logs")
+2026-07-14 11:44:03,873 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,874 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("security_events")
+2026-07-14 11:44:03,874 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,875 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("security_events")
+2026-07-14 11:44:03,876 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,876 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("tenants")
+2026-07-14 11:44:03,876 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,877 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("tenants")
+2026-07-14 11:44:03,877 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,877 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("company_settings")
+2026-07-14 11:44:03,878 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,878 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("company_settings")
+2026-07-14 11:44:03,878 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,879 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("company_offices")
+2026-07-14 11:44:03,879 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,879 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("company_offices")
+2026-07-14 11:44:03,879 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,880 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("departments")
+2026-07-14 11:44:03,880 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,880 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("departments")
+2026-07-14 11:44:03,880 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,881 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("user_roles")
+2026-07-14 11:44:03,881 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,881 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("user_roles")
+2026-07-14 11:44:03,881 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,882 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("role_permissions")
+2026-07-14 11:44:03,882 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,882 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("role_permissions")
+2026-07-14 11:44:03,882 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,883 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("permissions")
+2026-07-14 11:44:03,883 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,883 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("permissions")
+2026-07-14 11:44:03,883 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,884 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("roles")
+2026-07-14 11:44:03,884 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,884 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("roles")
+2026-07-14 11:44:03,884 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,885 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("users")
+2026-07-14 11:44:03,885 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,885 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("users")
+2026-07-14 11:44:03,885 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,887 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("refresh_tokens")
+2026-07-14 11:44:03,887 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,887 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("refresh_tokens")
+2026-07-14 11:44:03,887 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,890 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("teams")
+2026-07-14 11:44:03,890 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,891 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("teams")
+2026-07-14 11:44:03,891 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,891 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("policy_documents")
+2026-07-14 11:44:03,891 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,892 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("policy_documents")
+2026-07-14 11:44:03,892 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,892 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("policy_versions")
+2026-07-14 11:44:03,892 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,893 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("policy_versions")
+2026-07-14 11:44:03,893 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,893 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("company_integrations")
+2026-07-14 11:44:03,893 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,894 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("company_integrations")
+2026-07-14 11:44:03,894 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,894 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("setup_wizard_states")
+2026-07-14 11:44:03,894 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,895 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("setup_wizard_states")
+2026-07-14 11:44:03,895 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,895 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("compliance_profiles")
+2026-07-14 11:44:03,896 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,896 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("compliance_profiles")
+2026-07-14 11:44:03,896 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,896 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("consent_records")
+2026-07-14 11:44:03,896 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,897 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("consent_records")
+2026-07-14 11:44:03,897 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,897 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("accommodation_requests")
+2026-07-14 11:44:03,897 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,898 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("accommodation_requests")
+2026-07-14 11:44:03,898 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,898 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("privacy_requests")
+2026-07-14 11:44:03,898 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,899 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("privacy_requests")
+2026-07-14 11:44:03,899 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,899 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("ai_usage_logs")
+2026-07-14 11:44:03,900 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,900 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("ai_usage_logs")
+2026-07-14 11:44:03,900 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,900 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("workflow_instances")
+2026-07-14 11:44:03,901 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,901 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("workflow_instances")
+2026-07-14 11:44:03,901 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,901 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("jobs")
+2026-07-14 11:44:03,902 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,902 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("jobs")
+2026-07-14 11:44:03,902 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,902 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("applications")
+2026-07-14 11:44:03,903 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,903 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("applications")
+2026-07-14 11:44:03,903 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,903 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("job_mcqs")
+2026-07-14 11:44:03,904 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,904 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("job_mcqs")
+2026-07-14 11:44:03,904 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,905 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("assessment_attempts")
+2026-07-14 11:44:03,905 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,906 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("assessment_attempts")
+2026-07-14 11:44:03,906 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,906 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("proctoring_logs")
+2026-07-14 11:44:03,906 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,907 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("proctoring_logs")
+2026-07-14 11:44:03,907 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,908 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("coding_challenges")
+2026-07-14 11:44:03,908 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,908 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("coding_challenges")
+2026-07-14 11:44:03,908 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,909 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("coding_submissions")
+2026-07-14 11:44:03,909 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,909 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("coding_submissions")
+2026-07-14 11:44:03,909 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,910 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("interviews")
+2026-07-14 11:44:03,910 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,910 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("interviews")
+2026-07-14 11:44:03,910 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,911 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("interview_messages")
+2026-07-14 11:44:03,911 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,911 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("interview_messages")
+2026-07-14 11:44:03,911 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,912 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("hackathon_submissions")
+2026-07-14 11:44:03,912 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,912 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("hackathon_submissions")
+2026-07-14 11:44:03,912 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,913 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("code_defenses")
+2026-07-14 11:44:03,913 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,913 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("code_defenses")
+2026-07-14 11:44:03,913 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,914 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("recruiter_calls")
+2026-07-14 11:44:03,914 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,914 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("recruiter_calls")
+2026-07-14 11:44:03,915 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,915 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("call_messages")
+2026-07-14 11:44:03,915 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,915 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("call_messages")
+2026-07-14 11:44:03,916 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-07-14 11:44:03,918 INFO sqlalchemy.engine.Engine 
+CREATE TABLE audit_logs (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	tenant_id VARCHAR, 
+	actor_id VARCHAR, 
+	actor_type VARCHAR(50) NOT NULL, 
+	action VARCHAR(200) NOT NULL, 
+	entity_type VARCHAR(100), 
+	entity_id VARCHAR, 
+	reason_code VARCHAR(200), 
+	reason_summary TEXT, 
+	input_references TEXT, 
+	output_summary TEXT, 
+	agent_name VARCHAR(200), 
+	agent_version VARCHAR(50), 
+	prompt_version VARCHAR(50), 
+	workflow_version VARCHAR(50), 
+	model_version VARCHAR(100), 
+	correlation_id VARCHAR(100), 
+	causation_id VARCHAR(100), 
+	ip_address VARCHAR(50), 
+	user_agent VARCHAR(500), 
+	status VARCHAR(50) NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2026-07-14 11:44:03,918 INFO sqlalchemy.engine.Engine [no key 0.00012s] ()
+2026-07-14 11:44:03,919 INFO sqlalchemy.engine.Engine CREATE INDEX ix_audit_logs_tenant_id ON audit_logs (tenant_id)
+2026-07-14 11:44:03,919 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,919 INFO sqlalchemy.engine.Engine CREATE INDEX ix_audit_logs_action ON audit_logs (action)
+2026-07-14 11:44:03,919 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,920 INFO sqlalchemy.engine.Engine CREATE INDEX ix_audit_logs_correlation_id ON audit_logs (correlation_id)
+2026-07-14 11:44:03,920 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,921 INFO sqlalchemy.engine.Engine 
+CREATE TABLE security_events (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	tenant_id VARCHAR, 
+	event_type VARCHAR(100) NOT NULL, 
+	severity VARCHAR(20) NOT NULL, 
+	user_id VARCHAR, 
+	ip_address VARCHAR(50), 
+	user_agent VARCHAR(500), 
+	path VARCHAR(500), 
+	details TEXT, 
+	resolved BOOLEAN NOT NULL, 
+	resolved_by VARCHAR, 
+	resolved_at VARCHAR, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2026-07-14 11:44:03,921 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,921 INFO sqlalchemy.engine.Engine CREATE INDEX ix_security_events_tenant_id ON security_events (tenant_id)
+2026-07-14 11:44:03,921 INFO sqlalchemy.engine.Engine [no key 0.00014s] ()
+2026-07-14 11:44:03,922 INFO sqlalchemy.engine.Engine CREATE INDEX ix_security_events_event_type ON security_events (event_type)
+2026-07-14 11:44:03,922 INFO sqlalchemy.engine.Engine [no key 0.00018s] ()
+2026-07-14 11:44:03,924 INFO sqlalchemy.engine.Engine 
+CREATE TABLE tenants (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	company_name VARCHAR(255) NOT NULL, 
+	company_slug VARCHAR(100) NOT NULL, 
+	legal_name VARCHAR(255), 
+	industry VARCHAR(100), 
+	company_size VARCHAR(50), 
+	website VARCHAR(500), 
+	email_domain VARCHAR(255), 
+	status VARCHAR(50) NOT NULL, 
+	is_sandbox BOOLEAN NOT NULL, 
+	"plan" VARCHAR(50) NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2026-07-14 11:44:03,924 INFO sqlalchemy.engine.Engine [no key 0.00017s] ()
+2026-07-14 11:44:03,924 INFO sqlalchemy.engine.Engine CREATE UNIQUE INDEX ix_tenants_company_slug ON tenants (company_slug)
+2026-07-14 11:44:03,925 INFO sqlalchemy.engine.Engine [no key 0.00020s] ()
+2026-07-14 11:44:03,926 INFO sqlalchemy.engine.Engine 
+CREATE TABLE permissions (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	name VARCHAR(100) NOT NULL, 
+	description VARCHAR(500), 
+	resource VARCHAR(100) NOT NULL, 
+	action VARCHAR(50) NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	UNIQUE (name)
+)
+
+
+2026-07-14 11:44:03,926 INFO sqlalchemy.engine.Engine [no key 0.00013s] ()
+2026-07-14 11:44:03,927 INFO sqlalchemy.engine.Engine 
+CREATE TABLE roles (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	name VARCHAR(100) NOT NULL, 
+	display_name VARCHAR(200) NOT NULL, 
+	description VARCHAR(500), 
+	is_system_role BOOLEAN NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	UNIQUE (name)
+)
+
+
+2026-07-14 11:44:03,927 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2026-07-14 11:44:03,928 INFO sqlalchemy.engine.Engine 
+CREATE TABLE company_settings (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	autonomy_level VARCHAR(30) NOT NULL, 
+	headquarters_country VARCHAR(100), 
+	headquarters_city VARCHAR(100), 
+	operating_countries TEXT, 
+	hiring_countries TEXT, 
+	time_zones TEXT, 
+	working_hours TEXT, 
+	holidays TEXT, 
+	notice_period_days_default INTEGER NOT NULL, 
+	offer_approval_required BOOLEAN NOT NULL, 
+	background_verification_required BOOLEAN NOT NULL, 
+	proctoring_enabled BOOLEAN NOT NULL, 
+	ai_interview_enabled BOOLEAN NOT NULL, 
+	voice_calls_enabled BOOLEAN NOT NULL, 
+	kill_automated_rejections BOOLEAN NOT NULL, 
+	kill_proctoring BOOLEAN NOT NULL, 
+	kill_voice_calls BOOLEAN NOT NULL, 
+	kill_all_workflows BOOLEAN NOT NULL, 
+	recruiter_display_name VARCHAR(255), 
+	sender_email VARCHAR(255), 
+	daily_ai_budget_usd FLOAT, 
+	monthly_ai_budget_usd FLOAT, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,928 INFO sqlalchemy.engine.Engine [no key 0.00016s] ()
+2026-07-14 11:44:03,929 INFO sqlalchemy.engine.Engine CREATE UNIQUE INDEX ix_company_settings_tenant_id ON company_settings (tenant_id)
+2026-07-14 11:44:03,929 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,930 INFO sqlalchemy.engine.Engine 
+CREATE TABLE company_offices (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	address_line1 VARCHAR(500), 
+	address_line2 VARCHAR(500), 
+	city VARCHAR(100) NOT NULL, 
+	state VARCHAR(100), 
+	country VARCHAR(100) NOT NULL, 
+	postal_code VARCHAR(20), 
+	time_zone VARCHAR(100), 
+	maps_url TEXT, 
+	is_active BOOLEAN NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,930 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,930 INFO sqlalchemy.engine.Engine CREATE INDEX ix_company_offices_tenant_id ON company_offices (tenant_id)
+2026-07-14 11:44:03,930 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,931 INFO sqlalchemy.engine.Engine 
+CREATE TABLE departments (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	parent_department_id VARCHAR, 
+	is_active BOOLEAN NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE, 
+	FOREIGN KEY(parent_department_id) REFERENCES departments (id)
+)
+
+
+2026-07-14 11:44:03,931 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,932 INFO sqlalchemy.engine.Engine CREATE INDEX ix_departments_tenant_id ON departments (tenant_id)
+2026-07-14 11:44:03,932 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,932 INFO sqlalchemy.engine.Engine 
+CREATE TABLE role_permissions (
+	role_id VARCHAR NOT NULL, 
+	permission_id VARCHAR NOT NULL, 
+	PRIMARY KEY (role_id, permission_id), 
+	FOREIGN KEY(role_id) REFERENCES roles (id) ON DELETE CASCADE, 
+	FOREIGN KEY(permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,932 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,933 INFO sqlalchemy.engine.Engine 
+CREATE TABLE users (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	email VARCHAR(320) NOT NULL, 
+	password_hash VARCHAR(1024) NOT NULL, 
+	full_name VARCHAR(500) NOT NULL, 
+	phone VARCHAR(50), 
+	status VARCHAR(50) NOT NULL, 
+	is_platform_admin BOOLEAN NOT NULL, 
+	mfa_enabled BOOLEAN NOT NULL, 
+	mfa_secret VARCHAR(500), 
+	last_login_at VARCHAR, 
+	failed_login_attempts INTEGER NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,933 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,934 INFO sqlalchemy.engine.Engine CREATE INDEX ix_users_email ON users (email)
+2026-07-14 11:44:03,934 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,934 INFO sqlalchemy.engine.Engine CREATE INDEX ix_users_tenant_id ON users (tenant_id)
+2026-07-14 11:44:03,934 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,935 INFO sqlalchemy.engine.Engine 
+CREATE TABLE company_integrations (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	integration_type VARCHAR(100) NOT NULL, 
+	display_name VARCHAR(255) NOT NULL, 
+	is_active BOOLEAN NOT NULL, 
+	is_verified BOOLEAN NOT NULL, 
+	credential_ref VARCHAR(500), 
+	config TEXT, 
+	last_verified_at DATETIME, 
+	verification_error TEXT, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT uq_integration_per_tenant UNIQUE (tenant_id, integration_type), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,935 INFO sqlalchemy.engine.Engine [no key 0.00010s] ()
+2026-07-14 11:44:03,936 INFO sqlalchemy.engine.Engine CREATE INDEX ix_company_integrations_tenant_id ON company_integrations (tenant_id)
+2026-07-14 11:44:03,936 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,937 INFO sqlalchemy.engine.Engine 
+CREATE TABLE setup_wizard_states (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	step_company_profile BOOLEAN NOT NULL, 
+	step_offices BOOLEAN NOT NULL, 
+	step_departments BOOLEAN NOT NULL, 
+	step_hiring_rules BOOLEAN NOT NULL, 
+	step_compliance BOOLEAN NOT NULL, 
+	step_email_integration BOOLEAN NOT NULL, 
+	step_calendar_integration BOOLEAN NOT NULL, 
+	step_sandbox_test BOOLEAN NOT NULL, 
+	completed_at DATETIME, 
+	activated_at DATETIME, 
+	current_step INTEGER NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT uq_wizard_per_tenant UNIQUE (tenant_id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,937 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,938 INFO sqlalchemy.engine.Engine CREATE INDEX ix_setup_wizard_states_tenant_id ON setup_wizard_states (tenant_id)
+2026-07-14 11:44:03,938 INFO sqlalchemy.engine.Engine [no key 0.00017s] ()
+2026-07-14 11:44:03,939 INFO sqlalchemy.engine.Engine 
+CREATE TABLE compliance_profiles (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	jurisdictions TEXT NOT NULL, 
+	ai_risk_classification VARCHAR(50) NOT NULL, 
+	bias_audit_requirements TEXT, 
+	strict_consent_required BOOLEAN NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,939 INFO sqlalchemy.engine.Engine [no key 0.00016s] ()
+2026-07-14 11:44:03,940 INFO sqlalchemy.engine.Engine CREATE INDEX ix_compliance_profiles_tenant_id ON compliance_profiles (tenant_id)
+2026-07-14 11:44:03,940 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2026-07-14 11:44:03,941 INFO sqlalchemy.engine.Engine 
+CREATE TABLE consent_records (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	candidate_id VARCHAR NOT NULL, 
+	workflow_stage VARCHAR(50) NOT NULL, 
+	consent_status BOOLEAN NOT NULL, 
+	consent_method VARCHAR(50) NOT NULL, 
+	verification_metadata TEXT, 
+	revoked_at DATETIME, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,941 INFO sqlalchemy.engine.Engine [no key 0.00014s] ()
+2026-07-14 11:44:03,942 INFO sqlalchemy.engine.Engine CREATE INDEX ix_consent_records_candidate_id ON consent_records (candidate_id)
+2026-07-14 11:44:03,942 INFO sqlalchemy.engine.Engine [no key 0.00012s] ()
+2026-07-14 11:44:03,942 INFO sqlalchemy.engine.Engine CREATE INDEX ix_consent_records_tenant_id ON consent_records (tenant_id)
+2026-07-14 11:44:03,943 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,943 INFO sqlalchemy.engine.Engine 
+CREATE TABLE privacy_requests (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	request_type VARCHAR(50) NOT NULL, 
+	candidate_email VARCHAR(320) NOT NULL, 
+	status VARCHAR(30) NOT NULL, 
+	verification_token VARCHAR(200), 
+	is_verified BOOLEAN NOT NULL, 
+	verified_at DATETIME, 
+	completed_at DATETIME, 
+	execution_log TEXT, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,943 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,944 INFO sqlalchemy.engine.Engine CREATE INDEX ix_privacy_requests_tenant_id ON privacy_requests (tenant_id)
+2026-07-14 11:44:03,944 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,944 INFO sqlalchemy.engine.Engine CREATE INDEX ix_privacy_requests_candidate_email ON privacy_requests (candidate_email)
+2026-07-14 11:44:03,944 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,945 INFO sqlalchemy.engine.Engine 
+CREATE TABLE ai_usage_logs (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	model_name VARCHAR(100) NOT NULL, 
+	purpose VARCHAR(100) NOT NULL, 
+	prompt_tokens INTEGER NOT NULL, 
+	completion_tokens INTEGER NOT NULL, 
+	cost_usd FLOAT NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,945 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,946 INFO sqlalchemy.engine.Engine CREATE INDEX ix_ai_usage_logs_tenant_id ON ai_usage_logs (tenant_id)
+2026-07-14 11:44:03,946 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,946 INFO sqlalchemy.engine.Engine CREATE INDEX ix_ai_usage_logs_created_at ON ai_usage_logs (created_at)
+2026-07-14 11:44:03,947 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,947 INFO sqlalchemy.engine.Engine 
+CREATE TABLE workflow_instances (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	application_id VARCHAR NOT NULL, 
+	current_stage VARCHAR(50) NOT NULL, 
+	status VARCHAR(30) NOT NULL, 
+	state_data TEXT, 
+	completed_at DATETIME, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,947 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,948 INFO sqlalchemy.engine.Engine CREATE INDEX ix_workflow_instances_application_id ON workflow_instances (application_id)
+2026-07-14 11:44:03,948 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,948 INFO sqlalchemy.engine.Engine CREATE INDEX ix_workflow_instances_tenant_id ON workflow_instances (tenant_id)
+2026-07-14 11:44:03,948 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,949 INFO sqlalchemy.engine.Engine 
+CREATE TABLE user_roles (
+	user_id VARCHAR NOT NULL, 
+	role_id VARCHAR NOT NULL, 
+	PRIMARY KEY (user_id, role_id), 
+	FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE, 
+	FOREIGN KEY(role_id) REFERENCES roles (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,949 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,950 INFO sqlalchemy.engine.Engine 
+CREATE TABLE refresh_tokens (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	user_id VARCHAR NOT NULL, 
+	token_hash VARCHAR(1024) NOT NULL, 
+	expires_at VARCHAR NOT NULL, 
+	is_revoked BOOLEAN NOT NULL, 
+	revoked_at VARCHAR, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE, 
+	UNIQUE (token_hash)
+)
+
+
+2026-07-14 11:44:03,950 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,951 INFO sqlalchemy.engine.Engine CREATE INDEX ix_refresh_tokens_user_id ON refresh_tokens (user_id)
+2026-07-14 11:44:03,951 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,951 INFO sqlalchemy.engine.Engine 
+CREATE TABLE teams (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	department_id VARCHAR NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	team_lead_user_id VARCHAR, 
+	headcount_target INTEGER, 
+	is_active BOOLEAN NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(department_id) REFERENCES departments (id) ON DELETE CASCADE, 
+	FOREIGN KEY(team_lead_user_id) REFERENCES users (id) ON DELETE SET NULL, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,952 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,952 INFO sqlalchemy.engine.Engine CREATE INDEX ix_teams_tenant_id ON teams (tenant_id)
+2026-07-14 11:44:03,952 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,953 INFO sqlalchemy.engine.Engine CREATE INDEX ix_teams_department_id ON teams (department_id)
+2026-07-14 11:44:03,953 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,953 INFO sqlalchemy.engine.Engine 
+CREATE TABLE policy_documents (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	title VARCHAR(500) NOT NULL, 
+	slug VARCHAR(200) NOT NULL, 
+	category VARCHAR(100) NOT NULL, 
+	description TEXT, 
+	current_published_version_id VARCHAR, 
+	status VARCHAR(50) NOT NULL, 
+	policy_owner_id VARCHAR, 
+	requires_legal_review BOOLEAN NOT NULL, 
+	applies_to TEXT, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT uq_policy_slug_per_tenant UNIQUE (tenant_id, slug), 
+	FOREIGN KEY(policy_owner_id) REFERENCES users (id) ON DELETE SET NULL, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,954 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2026-07-14 11:44:03,954 INFO sqlalchemy.engine.Engine CREATE INDEX ix_policy_documents_tenant_id ON policy_documents (tenant_id)
+2026-07-14 11:44:03,954 INFO sqlalchemy.engine.Engine [no key 0.00016s] ()
+2026-07-14 11:44:03,957 INFO sqlalchemy.engine.Engine CREATE INDEX ix_policy_documents_slug ON policy_documents (slug)
+2026-07-14 11:44:03,957 INFO sqlalchemy.engine.Engine [no key 0.00018s] ()
+2026-07-14 11:44:03,958 INFO sqlalchemy.engine.Engine 
+CREATE TABLE accommodation_requests (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	candidate_id VARCHAR NOT NULL, 
+	request_type VARCHAR(50) NOT NULL, 
+	details TEXT NOT NULL, 
+	status VARCHAR(30) NOT NULL, 
+	reviewed_by_id VARCHAR, 
+	review_notes TEXT, 
+	reviewed_at DATETIME, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(reviewed_by_id) REFERENCES users (id) ON DELETE SET NULL, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,958 INFO sqlalchemy.engine.Engine [no key 0.00015s] ()
+2026-07-14 11:44:03,959 INFO sqlalchemy.engine.Engine CREATE INDEX ix_accommodation_requests_tenant_id ON accommodation_requests (tenant_id)
+2026-07-14 11:44:03,959 INFO sqlalchemy.engine.Engine [no key 0.00013s] ()
+2026-07-14 11:44:03,960 INFO sqlalchemy.engine.Engine CREATE INDEX ix_accommodation_requests_candidate_id ON accommodation_requests (candidate_id)
+2026-07-14 11:44:03,960 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,960 INFO sqlalchemy.engine.Engine 
+CREATE TABLE jobs (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	department_id VARCHAR NOT NULL, 
+	title VARCHAR(255) NOT NULL, 
+	description TEXT NOT NULL, 
+	requirements TEXT, 
+	status VARCHAR(50) NOT NULL, 
+	sourcing_channels TEXT, 
+	created_by_id VARCHAR, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(department_id) REFERENCES departments (id) ON DELETE CASCADE, 
+	FOREIGN KEY(created_by_id) REFERENCES users (id) ON DELETE SET NULL, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,961 INFO sqlalchemy.engine.Engine [no key 0.00010s] ()
+2026-07-14 11:44:03,961 INFO sqlalchemy.engine.Engine CREATE INDEX ix_jobs_tenant_id ON jobs (tenant_id)
+2026-07-14 11:44:03,961 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,962 INFO sqlalchemy.engine.Engine CREATE INDEX ix_jobs_department_id ON jobs (department_id)
+2026-07-14 11:44:03,962 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,963 INFO sqlalchemy.engine.Engine 
+CREATE TABLE policy_versions (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	policy_id VARCHAR NOT NULL, 
+	version_number VARCHAR(20) NOT NULL, 
+	content TEXT NOT NULL, 
+	content_format VARCHAR(20) NOT NULL, 
+	status VARCHAR(50) NOT NULL, 
+	authored_by_id VARCHAR, 
+	is_ai_drafted BOOLEAN NOT NULL, 
+	reviewed_by_id VARCHAR, 
+	reviewed_at DATETIME, 
+	approved_by_id VARCHAR, 
+	approved_at DATETIME, 
+	published_at DATETIME, 
+	change_summary TEXT, 
+	rejection_reason TEXT, 
+	effective_from DATETIME, 
+	effective_until DATETIME, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(policy_id) REFERENCES policy_documents (id) ON DELETE CASCADE, 
+	FOREIGN KEY(authored_by_id) REFERENCES users (id) ON DELETE SET NULL, 
+	FOREIGN KEY(reviewed_by_id) REFERENCES users (id) ON DELETE SET NULL, 
+	FOREIGN KEY(approved_by_id) REFERENCES users (id) ON DELETE SET NULL, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,963 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,963 INFO sqlalchemy.engine.Engine CREATE INDEX ix_policy_versions_tenant_id ON policy_versions (tenant_id)
+2026-07-14 11:44:03,963 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,964 INFO sqlalchemy.engine.Engine CREATE INDEX ix_policy_versions_policy_id ON policy_versions (policy_id)
+2026-07-14 11:44:03,964 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,965 INFO sqlalchemy.engine.Engine 
+CREATE TABLE applications (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	job_id VARCHAR NOT NULL, 
+	candidate_name VARCHAR(255) NOT NULL, 
+	candidate_email VARCHAR(320) NOT NULL, 
+	resume_url VARCHAR(500), 
+	status VARCHAR(50) NOT NULL, 
+	raw_parsed_data TEXT, 
+	fit_score FLOAT, 
+	screening_feedback TEXT, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(job_id) REFERENCES jobs (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,965 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,965 INFO sqlalchemy.engine.Engine CREATE INDEX ix_applications_candidate_email ON applications (candidate_email)
+2026-07-14 11:44:03,965 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,966 INFO sqlalchemy.engine.Engine CREATE INDEX ix_applications_tenant_id ON applications (tenant_id)
+2026-07-14 11:44:03,966 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,966 INFO sqlalchemy.engine.Engine CREATE INDEX ix_applications_job_id ON applications (job_id)
+2026-07-14 11:44:03,966 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,967 INFO sqlalchemy.engine.Engine 
+CREATE TABLE job_mcqs (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	job_id VARCHAR NOT NULL, 
+	question_text TEXT NOT NULL, 
+	options TEXT NOT NULL, 
+	correct_option VARCHAR(255) NOT NULL, 
+	difficulty VARCHAR(50) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(job_id) REFERENCES jobs (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,967 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,968 INFO sqlalchemy.engine.Engine CREATE INDEX ix_job_mcqs_tenant_id ON job_mcqs (tenant_id)
+2026-07-14 11:44:03,968 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,968 INFO sqlalchemy.engine.Engine CREATE INDEX ix_job_mcqs_job_id ON job_mcqs (job_id)
+2026-07-14 11:44:03,968 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,969 INFO sqlalchemy.engine.Engine 
+CREATE TABLE coding_challenges (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	job_id VARCHAR NOT NULL, 
+	title VARCHAR(255) NOT NULL, 
+	description TEXT NOT NULL, 
+	starter_code TEXT NOT NULL, 
+	test_cases TEXT NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(job_id) REFERENCES jobs (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,969 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,970 INFO sqlalchemy.engine.Engine CREATE INDEX ix_coding_challenges_job_id ON coding_challenges (job_id)
+2026-07-14 11:44:03,970 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,970 INFO sqlalchemy.engine.Engine CREATE INDEX ix_coding_challenges_tenant_id ON coding_challenges (tenant_id)
+2026-07-14 11:44:03,970 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,971 INFO sqlalchemy.engine.Engine 
+CREATE TABLE assessment_attempts (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	application_id VARCHAR NOT NULL, 
+	type VARCHAR(50) NOT NULL, 
+	score FLOAT, 
+	status VARCHAR(50) NOT NULL, 
+	integrity_risk VARCHAR(50) NOT NULL, 
+	responses TEXT NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(application_id) REFERENCES applications (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,972 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2026-07-14 11:44:03,973 INFO sqlalchemy.engine.Engine CREATE INDEX ix_assessment_attempts_tenant_id ON assessment_attempts (tenant_id)
+2026-07-14 11:44:03,973 INFO sqlalchemy.engine.Engine [no key 0.00024s] ()
+2026-07-14 11:44:03,974 INFO sqlalchemy.engine.Engine CREATE INDEX ix_assessment_attempts_application_id ON assessment_attempts (application_id)
+2026-07-14 11:44:03,974 INFO sqlalchemy.engine.Engine [no key 0.00013s] ()
+2026-07-14 11:44:03,975 INFO sqlalchemy.engine.Engine 
+CREATE TABLE interviews (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	application_id VARCHAR NOT NULL, 
+	status VARCHAR(50) NOT NULL, 
+	overall_score FLOAT, 
+	evaluation_report TEXT NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(application_id) REFERENCES applications (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,975 INFO sqlalchemy.engine.Engine [no key 0.00013s] ()
+2026-07-14 11:44:03,976 INFO sqlalchemy.engine.Engine CREATE INDEX ix_interviews_tenant_id ON interviews (tenant_id)
+2026-07-14 11:44:03,976 INFO sqlalchemy.engine.Engine [no key 0.00010s] ()
+2026-07-14 11:44:03,976 INFO sqlalchemy.engine.Engine CREATE INDEX ix_interviews_application_id ON interviews (application_id)
+2026-07-14 11:44:03,976 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,977 INFO sqlalchemy.engine.Engine 
+CREATE TABLE hackathon_submissions (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	application_id VARCHAR NOT NULL, 
+	repo_url VARCHAR(500), 
+	code_snapshot TEXT NOT NULL, 
+	status VARCHAR(50) NOT NULL, 
+	architecture_score FLOAT, 
+	test_pass_ratio FLOAT, 
+	evaluation_summary TEXT, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(application_id) REFERENCES applications (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,977 INFO sqlalchemy.engine.Engine [no key 0.00010s] ()
+2026-07-14 11:44:03,978 INFO sqlalchemy.engine.Engine CREATE INDEX ix_hackathon_submissions_tenant_id ON hackathon_submissions (tenant_id)
+2026-07-14 11:44:03,978 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,978 INFO sqlalchemy.engine.Engine CREATE INDEX ix_hackathon_submissions_application_id ON hackathon_submissions (application_id)
+2026-07-14 11:44:03,978 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,979 INFO sqlalchemy.engine.Engine 
+CREATE TABLE recruiter_calls (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	application_id VARCHAR NOT NULL, 
+	status VARCHAR(50) NOT NULL, 
+	call_duration INTEGER NOT NULL, 
+	recording_url VARCHAR(500), 
+	summary TEXT, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(application_id) REFERENCES applications (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,979 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,980 INFO sqlalchemy.engine.Engine CREATE INDEX ix_recruiter_calls_application_id ON recruiter_calls (application_id)
+2026-07-14 11:44:03,980 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,980 INFO sqlalchemy.engine.Engine CREATE INDEX ix_recruiter_calls_tenant_id ON recruiter_calls (tenant_id)
+2026-07-14 11:44:03,980 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,981 INFO sqlalchemy.engine.Engine 
+CREATE TABLE proctoring_logs (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	assessment_attempt_id VARCHAR NOT NULL, 
+	event_type VARCHAR(100) NOT NULL, 
+	evidence_reference VARCHAR(500), 
+	log_metadata TEXT NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(assessment_attempt_id) REFERENCES assessment_attempts (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,981 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,982 INFO sqlalchemy.engine.Engine CREATE INDEX ix_proctoring_logs_assessment_attempt_id ON proctoring_logs (assessment_attempt_id)
+2026-07-14 11:44:03,982 INFO sqlalchemy.engine.Engine [no key 0.00010s] ()
+2026-07-14 11:44:03,982 INFO sqlalchemy.engine.Engine CREATE INDEX ix_proctoring_logs_tenant_id ON proctoring_logs (tenant_id)
+2026-07-14 11:44:03,983 INFO sqlalchemy.engine.Engine [no key 0.00015s] ()
+2026-07-14 11:44:03,983 INFO sqlalchemy.engine.Engine 
+CREATE TABLE coding_submissions (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	assessment_attempt_id VARCHAR NOT NULL, 
+	challenge_id VARCHAR NOT NULL, 
+	code TEXT NOT NULL, 
+	language VARCHAR(50) NOT NULL, 
+	status VARCHAR(50) NOT NULL, 
+	results TEXT NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	updated_at DATETIME DEFAULT (now()) NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(assessment_attempt_id) REFERENCES assessment_attempts (id) ON DELETE CASCADE, 
+	FOREIGN KEY(challenge_id) REFERENCES coding_challenges (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,984 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2026-07-14 11:44:03,984 INFO sqlalchemy.engine.Engine CREATE INDEX ix_coding_submissions_challenge_id ON coding_submissions (challenge_id)
+2026-07-14 11:44:03,984 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,985 INFO sqlalchemy.engine.Engine CREATE INDEX ix_coding_submissions_assessment_attempt_id ON coding_submissions (assessment_attempt_id)
+2026-07-14 11:44:03,985 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,985 INFO sqlalchemy.engine.Engine CREATE INDEX ix_coding_submissions_tenant_id ON coding_submissions (tenant_id)
+2026-07-14 11:44:03,985 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,986 INFO sqlalchemy.engine.Engine 
+CREATE TABLE interview_messages (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	interview_id VARCHAR NOT NULL, 
+	sender VARCHAR(50) NOT NULL, 
+	message_text TEXT NOT NULL, 
+	audio_url VARCHAR(500), 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(interview_id) REFERENCES interviews (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,986 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,986 INFO sqlalchemy.engine.Engine CREATE INDEX ix_interview_messages_interview_id ON interview_messages (interview_id)
+2026-07-14 11:44:03,987 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2026-07-14 11:44:03,987 INFO sqlalchemy.engine.Engine CREATE INDEX ix_interview_messages_tenant_id ON interview_messages (tenant_id)
+2026-07-14 11:44:03,987 INFO sqlalchemy.engine.Engine [no key 0.00007s] ()
+2026-07-14 11:44:03,988 INFO sqlalchemy.engine.Engine 
+CREATE TABLE code_defenses (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	submission_id VARCHAR NOT NULL, 
+	defense_question TEXT NOT NULL, 
+	candidate_explanation TEXT, 
+	plagiarism_risk VARCHAR(50) NOT NULL, 
+	defense_score FLOAT, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(submission_id) REFERENCES hackathon_submissions (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,988 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2026-07-14 11:44:03,989 INFO sqlalchemy.engine.Engine CREATE INDEX ix_code_defenses_tenant_id ON code_defenses (tenant_id)
+2026-07-14 11:44:03,989 INFO sqlalchemy.engine.Engine [no key 0.00026s] ()
+2026-07-14 11:44:03,990 INFO sqlalchemy.engine.Engine CREATE INDEX ix_code_defenses_submission_id ON code_defenses (submission_id)
+2026-07-14 11:44:03,990 INFO sqlalchemy.engine.Engine [no key 0.00013s] ()
+2026-07-14 11:44:03,991 INFO sqlalchemy.engine.Engine 
+CREATE TABLE call_messages (
+	id VARCHAR DEFAULT (gen_random_uuid()) NOT NULL, 
+	call_id VARCHAR NOT NULL, 
+	sender VARCHAR(50) NOT NULL, 
+	message_text TEXT NOT NULL, 
+	created_at DATETIME DEFAULT (now()) NOT NULL, 
+	tenant_id VARCHAR NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(call_id) REFERENCES recruiter_calls (id) ON DELETE CASCADE, 
+	FOREIGN KEY(tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+)
+
+
+2026-07-14 11:44:03,991 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2026-07-14 11:44:03,992 INFO sqlalchemy.engine.Engine CREATE INDEX ix_call_messages_tenant_id ON call_messages (tenant_id)
+2026-07-14 11:44:03,992 INFO sqlalchemy.engine.Engine [no key 0.00014s] ()
+2026-07-14 11:44:03,993 INFO sqlalchemy.engine.Engine CREATE INDEX ix_call_messages_call_id ON call_messages (call_id)
+2026-07-14 11:44:03,993 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2026-07-14 11:44:03,993 INFO sqlalchemy.engine.Engine COMMIT
+============================== warnings summary ===============================
+app\api\v1\tenants.py:20
+  D:\Hr Agent\backend\app\api\v1\tenants.py:20: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class TenantSummary(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+______________ coverage: platform win32, python 3.12.10-final-0 _______________
+
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+app\__init__.py                       0      0   100%
+app\api\__init__.py                   0      0   100%
+app\api\deps.py                      55     28    49%   28-43, 48-54, 59-65, 70, 81-83, 93-96
+app\api\v1\__init__.py               30      0   100%
+app\api\v1\applications.py           37     17    54%   36-48, 60-69, 78-81
+app\api\v1\assessments.py            27     15    44%   28-38, 63-78
+app\api\v1\auth.py                  113     71    37%   79-162, 178-270, 282-321
+app\api\v1\company.py               179     81    55%   103-104, 129-139, 169-219, 233-253, 260-261, 284-298, 313-317, 326-328, 339-340, 361-376, 389-393, 404-405, 427-445
+app\api\v1\compliance.py             85     37    56%   57-67, 77-99, 108-131, 141-142, 151-172, 181, 192-216, 225-231, 245-251, 261-281
+app\api\v1\jobs.py                   65     33    49%   46-57, 70-82, 91-100, 109-112, 122-125, 136-148
+app\api\v1\policies.py               88     46    48%   53-54, 83-118, 128-131, 153-158, 187-206, 221-235, 250-264, 285-308, 318-323
+app\api\v1\public.py                 83     40    52%   41-53, 68-77, 89-96, 108-114, 131-137, 169-182, 197-212, 228-242, 258-270
+app\api\v1\public_calls.py           37     18    51%   41-59, 75-87, 102-115
+app\api\v1\public_challenges.py      77     57    26%   41-72, 98-195
+app\api\v1\public_hackathons.py      38     17    55%   43-57, 72-86, 102-114
+app\api\v1\public_interviews.py      38     18    53%   42-60, 76-89, 104-116
+app\api\v1\tenants.py                56     29    48%   42-46, 64-94, 109-145
+app\api\v1\workflows.py              58     26    55%   48-54, 63-66, 76-85, 96-108, 120-141
+app\core\__init__.py                  0      0   100%
+app\core\config.py                   56      2    96%   84, 88
+app\core\database.py                 34     20    41%   48-50, 58-66, 76-89
+app\core\logging.py                  23     15    35%   16-58
+app\core\redis.py                    46     27    41%   20-28, 33-35, 39-41, 51-52, 55, 58, 61-62, 65, 68, 72-74, 77-78, 81-85
+app\core\security.py                 38     23    39%   19, 23-24, 28-34, 45-58, 67-77, 85-94
+app\main.py                          43     13    70%   27-42, 61, 87-94, 102
+app\middleware\__init__.py            0      0   100%
+app\middleware\audit.py              23     12    48%   35-63
+app\middleware\rate_limit.py         33     23    30%   27-68
+app\middleware\tenant.py             58     47    19%   42-109, 112, 117-120
+app\models\__init__.py               14      0   100%
+app\models\ai.py                     17      0   100%
+app\models\application.py            19      0   100%
+app\models\assessment.py             35      0   100%
+app\models\audit.py                  48      2    96%   78, 113
+app\models\base.py                   13      1    92%   16
+app\models\challenge.py              25      0   100%
+app\models\company.py                91      6    93%   93, 153, 190, 227-232, 236
+app\models\compliance.py             45      0   100%
+app\models\hackathon.py              29      0   100%
+app\models\interview.py              25      0   100%
+app\models\job.py                    18      0   100%
+app\models\recruiter_call.py         25      0   100%
+app\models\tenant.py                 81      2    98%   55, 121
+app\models\user.py                   70     11    84%   73, 140, 144-148, 151-153, 156
+app\models\workflow.py               16      0   100%
+app\services\__init__.py              0      0   100%
+app\services\application.py          59     40    32%   31-36, 53-155
+app\services\assessment.py          109     87    20%   33-81, 93-113, 124-145, 158-199, 214-245
+app\services\audit.py                22     13    41%   15, 41-70, 84-95, 99
+app\services\company.py             100     74    26%   21, 27-30, 38-46, 54-64, 72-77, 83-88, 94-100, 108-111, 120-126, 132-136, 144-153, 159-165, 175-183, 192-198, 206-210, 216-222, 234-244
+app\services\compliance.py          119    100    16%   19, 25-28, 39-58, 72-105, 114-124, 136-145, 153-157, 168-181, 193-207, 216-230, 238-281
+app\services\hackathon.py            65     47    28%   22-23, 39-98, 111-178
+app\services\interview.py            95     73    23%   22-23, 29-30, 42-80, 94-152, 164-220
+app\services\job.py                  69     46    33%   36-59, 75-104, 108-113, 123-142, 153-191
+app\services\llm.py                  81     60    26%   38-75, 91-127, 134-204
+app\services\policy.py               88     67    24%   21, 35-41, 47-53, 59-65, 84-114, 120-128, 145-167, 176-191, 200-213, 229-265, 275-286
+app\services\prompt.py               24     14    42%   26-35, 42-47
+app\services\recruiter_call.py       78     58    26%   22-23, 37-82, 95-142, 154-193
+app\services\sandbox.py              69     54    22%   33-47, 59-127, 138-192
+app\services\workflows.py            51     34    33%   20, 34-59, 67-72, 86-125
+---------------------------------------------------------------
+TOTAL                              3020   1504    50%
+=========================== short test summary info ===========================
+ERROR tests/test_call_pipeline.py::test_recruiter_call_lifecycle - sqlalchemy...
+========================= 1 warning, 1 error in 1.21s =========================
