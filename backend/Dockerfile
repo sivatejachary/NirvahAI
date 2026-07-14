@@ -11,15 +11,15 @@ WORKDIR /app
 
 # ── Python Dependencies ────────────────────────────────────────────────────────
 # Copy and install python requirements
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Copy Application Code ──────────────────────────────────────────────────────
 # Copy alembic configurations and source code
-COPY alembic.ini .
-COPY alembic/ ./alembic/
-COPY app/ ./app/
-COPY scripts/ ./scripts/
+COPY backend/alembic.ini .
+COPY backend/alembic/ ./alembic/
+COPY backend/app/ ./app/
+COPY backend/scripts/ ./scripts/
 
 # ── Ports & Startup ────────────────────────────────────────────────────────────
 EXPOSE 8080
