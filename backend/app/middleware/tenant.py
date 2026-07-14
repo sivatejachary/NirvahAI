@@ -23,6 +23,7 @@ PUBLIC_PATHS = {
     "/api/v1/auth/register",
     "/api/v1/auth/refresh",
     "/api/docs",
+    "/docs",
     "/api/redoc",
     "/api/openapi.json",
 }

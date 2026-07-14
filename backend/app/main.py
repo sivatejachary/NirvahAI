@@ -101,6 +101,12 @@ def create_application() -> FastAPI:
     async def health():
         return {"status": "ok", "service": "hros-api", "version": "1.0.0"}
 
+    # ── Docs Redirect ─────────────────────────────────────────────────────────
+    @app.get("/docs", include_in_schema=False)
+    async def docs_redirect():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/api/docs")
+
     return app
 
 
