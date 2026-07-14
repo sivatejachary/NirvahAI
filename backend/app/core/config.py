@@ -74,11 +74,15 @@ class Settings(BaseSettings):
     def parse_database_url(cls, v: Any) -> str:
         """
         Coerces postgresql:// or postgres:// database URLs to use postgresql+asyncpg://
-        and prefers DATABASE_PRIVATE_URL or POSTGRES_PRIVATE_URL if set.
+        and prefers DATABASE_PRIVATE_URL or POSTGRES_PRIVATE_URL if set (unless USE_PUBLIC_URLS/USE_PUBLIC_DB is true).
         """
         import os
-        private_url = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("POSTGRES_PRIVATE_URL")
-        url = private_url or v
+        use_public = os.environ.get("USE_PUBLIC_URLS", "").lower() == "true" or os.environ.get("USE_PUBLIC_DB", "").lower() == "true"
+        if use_public:
+            url = v
+        else:
+            private_url = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("POSTGRES_PRIVATE_URL")
+            url = private_url or v
 
         if not url or not isinstance(url, str):
             return url
@@ -99,11 +103,15 @@ class Settings(BaseSettings):
     @classmethod
     def parse_redis_url(cls, v: Any) -> str:
         """
-        Prefers REDIS_PRIVATE_URL if set in the environment.
+        Prefers REDIS_PRIVATE_URL if set in the environment (unless USE_PUBLIC_URLS/USE_PUBLIC_REDIS is true).
         """
         import os
-        private_url = os.environ.get("REDIS_PRIVATE_URL")
-        url = private_url or v
+        use_public = os.environ.get("USE_PUBLIC_URLS", "").lower() == "true" or os.environ.get("USE_PUBLIC_REDIS", "").lower() == "true"
+        if use_public:
+            url = v
+        else:
+            private_url = os.environ.get("REDIS_PRIVATE_URL")
+            url = private_url or v
         return url.strip() if isinstance(url, str) else url
 
     # ── Qdrant ───────────────────────────────────────────────────────────────
