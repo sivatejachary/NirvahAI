@@ -63,7 +63,6 @@ export default function HiringRulesPage() {
     setError('');
     setSuccess('');
     try {
-          const headers = getHeaders();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/hiring-rules`, {
         method: 'PATCH', headers: h, body: JSON.stringify(rules),
       });
