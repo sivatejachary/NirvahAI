@@ -10,13 +10,13 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # ── Python Dependencies ────────────────────────────────────────────────────────
-# Copy and install python requirements
-COPY backend/requirements.txt .
+# Copy and install python requirements (relative to service root directory)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Copy Application Code ──────────────────────────────────────────────────────
-# Copy all backend source code and files at once
-COPY backend/ .
+# Copy all source files in the service root directory (relative to context)
+COPY . .
 
 # ── Ports & Startup ────────────────────────────────────────────────────────────
 EXPOSE 8080
