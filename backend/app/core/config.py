@@ -2,9 +2,11 @@
 Application Configuration
 Loaded from environment variables using pydantic-settings.
 """
+import json
 from functools import lru_cache
-from typing import List
+from typing import Any, List
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,15 +22,44 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     APP_SECRET_KEY: str = "change-me-in-production"
     APP_DEBUG: bool = True
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://192.168.1.28:3000",
-        "http://192.168.1.28:3001",
-        "https://vidyamarg-ai.vercel.app",
-        "https://nirvah-ai-ruby.vercel.app",
-        "https://nirvahai-production.up.railway.app",
-    ]
+    ALLOWED_ORIGINS: Any = None
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: Any) -> List[str]:
+        """
+        Accept ALLOWED_ORIGINS as:
+          - None / empty string  → use built-in defaults
+          - JSON array string    → '["http://...","http://..."]'
+          - Comma-separated str  → 'http://...,http://...'
+          - Already a list       → pass through
+        """
+        _defaults = [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://192.168.1.28:3000",
+            "http://192.168.1.28:3001",
+            "https://vidyamarg-ai.vercel.app",
+            "https://nirvah-ai-ruby.vercel.app",
+            "https://nirvahai-production.up.railway.app",
+        ]
+        if v is None or v == "":
+            return _defaults
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return _defaults
+            # Try JSON array first
+            if v.startswith("["):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # Fall back to comma-separated
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return _defaults
 
     # ── PostgreSQL ────────────────────────────────────────────────────────────
     POSTGRES_HOST: str = "localhost"
