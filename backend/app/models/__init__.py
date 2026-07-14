@@ -13,3 +13,12 @@ from app.models.interview import Interview, InterviewMessage
 from app.models.hackathon import HackathonSubmission, CodeDefense
 from app.models.recruiter_call import RecruiterCall, CallMessage
 from app.models.scheduler import InterviewerSchedule, InterviewBooking
+from app.models.selection import ManagerInterview
+from app.models.offer import Offer
+from app.models.bgv import BackgroundCheck
+from app.models.onboarding import OnboardingPlan, OnboardingTask
+from app.models.hr_chat import HRChatSession
+from app.models.performance import PerformanceReview, PerformanceGoal
+from app.models.meeting import Meeting
+from app.models.warning_letter import WarningLetter
+from app.models.offboarding import OffboardingPlan, OffboardingTask

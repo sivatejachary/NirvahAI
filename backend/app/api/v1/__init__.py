@@ -18,6 +18,17 @@ from app.api.v1.public_interviews import router as public_interviews_router
 from app.api.v1.public_hackathons import router as public_hackathons_router
 from app.api.v1.public_calls import router as public_calls_router
 from app.api.v1.public_scheduler import router as public_scheduler_router
+from app.api.v1.selection import router as selection_router
+from app.api.v1.offers import router as offers_router
+from app.api.v1.bgv import router as bgv_router
+from app.api.v1.onboarding import router as onboarding_router
+from app.api.v1.hr_chat import router as hr_chat_router
+from app.api.v1.performance import router as performance_router
+from app.api.v1.meetings import router as meetings_router
+from app.api.v1.warning_letters import router as warning_letters_router
+from app.api.v1.offboarding import router as offboarding_router
+from app.api.v1.analytics import router as analytics_router
+from app.api.v1.sandbox import router as sandbox_router
 
 router = APIRouter()
 
@@ -36,3 +47,14 @@ router.include_router(public_interviews_router)
 router.include_router(public_hackathons_router)
 router.include_router(public_calls_router)
 router.include_router(public_scheduler_router)
+router.include_router(selection_router)
+router.include_router(offers_router)
+router.include_router(bgv_router)
+router.include_router(onboarding_router)
+router.include_router(hr_chat_router)
+router.include_router(performance_router)
+router.include_router(meetings_router)
+router.include_router(warning_letters_router)
+router.include_router(offboarding_router)
+router.include_router(analytics_router)
+router.include_router(sandbox_router)
