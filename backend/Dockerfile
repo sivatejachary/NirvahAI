@@ -19,7 +19,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/alembic.ini .
 COPY backend/alembic ./alembic
 COPY backend/app ./app
-COPY backend/scripts ./scripts
 
 # ── Ports & Startup ────────────────────────────────────────────────────────────
 EXPOSE 8080
