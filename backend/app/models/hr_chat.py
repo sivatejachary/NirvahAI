@@ -25,6 +25,6 @@ class HRChatSession(Base, TenantMixin, TimestampMixin):
     employee_email: Mapped[str] = mapped_column(String(320), nullable=False)
     channel: Mapped[str] = mapped_column(String(50), nullable=False, default="CHAT")  # CHAT | VOICE
     topic: Mapped[Optional[str]] = mapped_column(String(255))
-    messages: Mapped[dict] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))  # [{role, content, timestamp}]
+    messages: Mapped[dict] = mapped_column(JSONB, default=list, server_default=text("'[]'"))  # [{role, content, timestamp}]
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="OPEN")  # OPEN | RESOLVED
     resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

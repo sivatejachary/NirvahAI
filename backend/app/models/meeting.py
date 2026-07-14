@@ -23,8 +23,8 @@ class Meeting(Base, TenantMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     meeting_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     duration_minutes: Mapped[Optional[int]] = mapped_column(Integer)
-    attendees: Mapped[dict] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))  # list of email strings
+    attendees: Mapped[dict] = mapped_column(JSONB, default=list, server_default=text("'[]'"))  # list of email strings
     transcript: Mapped[Optional[str]] = mapped_column(Text)
     summary: Mapped[Optional[str]] = mapped_column(Text)
-    action_items: Mapped[dict] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))  # [{item, owner, due}]
+    action_items: Mapped[dict] = mapped_column(JSONB, default=list, server_default=text("'[]'"))  # [{item, owner, due}]
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="PENDING_SUMMARY")  # PENDING_SUMMARY | SUMMARIZED

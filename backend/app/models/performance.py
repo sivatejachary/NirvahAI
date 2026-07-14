@@ -25,8 +25,8 @@ class PerformanceReview(Base, TenantMixin, TimestampMixin):
     employee_email: Mapped[str] = mapped_column(String(320), nullable=False)
     review_period: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., Q1 2026
     reviewer_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    goals: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
-    ratings: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
+    goals: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'"))
+    ratings: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'"))
     overall_score: Mapped[Optional[float]] = mapped_column(Float)
     summary: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="DRAFT")  # DRAFT | SUBMITTED | APPROVED
