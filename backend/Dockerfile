@@ -15,11 +15,8 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Copy Application Code ──────────────────────────────────────────────────────
-# Copy alembic configurations and source code
-COPY backend/alembic.ini .
-COPY backend/alembic ./alembic
-COPY backend/app ./app
-COPY backend/scripts ./scripts
+# Copy all backend source code and files at once
+COPY backend/ .
 
 # ── Ports & Startup ────────────────────────────────────────────────────────────
 EXPOSE 8080
