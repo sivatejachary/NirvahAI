@@ -14,7 +14,9 @@ from app.core.security import hash_password
 from app.models import (
     audit, tenant, user, company, compliance, ai,
     workflow, job, application, assessment, challenge,
-    interview, hackathon, recruiter_call, scheduler
+    interview, hackathon, recruiter_call, scheduler,
+    bgv, meeting, hr_chat, offboarding, onboarding,
+    offer, performance, selection, warning_letter
 )
 
 # Permissions list
@@ -99,15 +101,15 @@ async def recreate_and_seed():
             db.add(perm)
             perm_objs.append(perm)
             
-        # Flush to generate IDs
-        print("Flushing roles and permissions...")
-        await db.flush()
-        
         # Assign permissions to tenant_admin, hr_manager, etc.
         # Allow all permissions to tenant_admin and hr_manager
         print("Assigning permissions to roles...")
         role_objs["tenant_admin"].permissions = perm_objs
         role_objs["hr_manager"].permissions = perm_objs
+
+        # Flush to generate IDs
+        print("Flushing roles and permissions...")
+        await db.flush()
         
         # Seed default tenant
         print("Seeding default tenant (dev-tenant)...")
@@ -132,14 +134,29 @@ async def recreate_and_seed():
         admin_user.roles = [role_objs["tenant_admin"], role_objs["hr_manager"]]
         db.add(admin_user)
         
-        # Seed initial company settings for setup wizard
-        print("Seeding default company settings...")
+        # Seed initial company settings and setup wizard state
+        print("Seeding default company settings and setup wizard state...")
+        from datetime import datetime, timezone
         settings_obj = tenant.CompanySettings(
             tenant_id=new_tenant.id,
-            setup_wizard_completed=True,
-            timezone="UTC"
+            autonomy_level="ASSISTED"
         )
         db.add(settings_obj)
+        
+        wizard_obj = company.SetupWizardState(
+            tenant_id=new_tenant.id,
+            step_company_profile=True,
+            step_offices=True,
+            step_departments=True,
+            step_hiring_rules=True,
+            step_compliance=True,
+            step_email_integration=True,
+            step_calendar_integration=True,
+            step_sandbox_test=True,
+            completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            activated_at=datetime.now(timezone.utc).replace(tzinfo=None)
+        )
+        db.add(wizard_obj)
         
         # Commit all seeded data
         print("Committing transaction...")

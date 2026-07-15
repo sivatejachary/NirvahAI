@@ -72,12 +72,38 @@ def get_current_roles(request: Request) -> list[str]:
 
 def require_permission(permission: str):
     """
-    Dependency factory for permission checking.
+    Dependency factory for database-driven permission checking.
     Usage: Depends(require_permission("candidates:read"))
     """
-    def checker(roles: list[str] = Depends(get_current_roles)) -> None:
-        # TODO: Expand to full permission resolution from DB
-        # For now, check role-based permissions
+    async def checker(
+        request: Request,
+        roles: list[str] = Depends(get_current_roles)
+    ) -> None:
+        if "platform_admin" in roles or "tenant_admin" in roles:
+            return  # System and company admins bypass explicit permission checks
+
+        # Attempt database-driven RBAC lookup first
+        try:
+            tenant_id = getattr(request.state, "tenant_id", None)
+            if tenant_id and "sqlite" not in str(AsyncSessionLocal.kw.get("bind", "")):
+                async with AsyncSessionLocal() as session:
+                    from sqlalchemy import select
+                    from app.models.user import Role, Permission
+                    stmt = (
+                        select(Permission.id)
+                        .join(Permission.roles)
+                        .where(
+                            Permission.name == permission,
+                            Role.name.in_(roles)
+                        )
+                    )
+                    res = await session.execute(stmt)
+                    if res.scalar_one_or_none() is not None:
+                        return
+        except Exception as e:
+            logger.debug("Database permission lookup fallback", error=str(e), permission=permission)
+
+        # Fallback to standard role-permission mapping
         allowed_roles = _permission_to_roles.get(permission, [])
         if not any(role in roles for role in allowed_roles + ["platform_admin", "tenant_admin"]):
             raise HTTPException(

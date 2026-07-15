@@ -93,13 +93,30 @@ class LLMGateway:
         # 2. Render versioned prompt template
         rendered_prompt = PromptRegistry.render(prompt_name, **variables)
         
-        # 3. Simulate or invoke live API
+        # 3. Invoke live Gemini API or fallback to simulated mock response
         api_key = settings.GEMINI_API_KEY
-        if api_key:
-            # Live invocation would go here (using google-genai package)
-            # To remain fully robust and testable offline, we simulate the token logs
-            output_text = cls._get_mock_response(purpose, variables)
-        else:
+        output_text = None
+
+        if api_key and api_key.strip() and not api_key.startswith("your_"):
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                gemini_model_name = model_name if model_name.startswith("gemini-") else "gemini-1.5-flash"
+                model_inst = genai.GenerativeModel(gemini_model_name)
+                
+                response = await model_inst.generate_content_async(rendered_prompt)
+                if response and response.text:
+                    output_text = response.text
+            except Exception as e:
+                logger.warning(
+                    "Live Gemini API invocation encountered an error; using fallback structured response",
+                    error=str(e),
+                    purpose=purpose,
+                    model=model_name
+                )
+                output_text = None
+
+        if not output_text:
             output_text = cls._get_mock_response(purpose, variables)
             
         # 4. Log cost details in audit database
