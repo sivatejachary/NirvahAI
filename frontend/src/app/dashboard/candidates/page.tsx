@@ -60,14 +60,14 @@ const STAGE_ICONS: Record<number, string> = {
 
 function getStatusStyle(status: string): string {
   const s: Record<string, string> = {
-    PASSED: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400',
-    FAILED: 'bg-rose-500/20 border-rose-500/40 text-rose-400',
-    PENDING: 'bg-amber-500/20 border-amber-500/40 text-amber-400',
-    SCHEDULED: 'bg-blue-500/20 border-blue-500/40 text-blue-400',
-    IN_PROGRESS: 'bg-violet-500/20 border-violet-500/40 text-violet-400',
-    SKIPPED: 'bg-slate-500/20 border-slate-500/40 text-slate-400',
+    PASSED: 'badge-success',
+    FAILED: 'badge-error',
+    PENDING: 'badge-warn',
+    SCHEDULED: 'badge-primary',
+    IN_PROGRESS: 'badge-default',
+    SKIPPED: 'badge-default',
   };
-  return s[status] || 'bg-slate-800/50 border-white/5 text-slate-600';
+  return s[status] || 'badge-default';
 }
 
 export default function CandidatesDashboardPage() {
@@ -207,7 +207,6 @@ export default function CandidatesDashboardPage() {
   };
 
   const getFilteredCandidates = () => {
-    // Search filter
     const matched = applications.filter(app =>
       app.candidate_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.candidate_email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -230,9 +229,9 @@ export default function CandidatesDashboardPage() {
   };
 
   const scoreColor = (s: number) =>
-    s >= 80 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' :
-    s >= 50 ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' :
-    'text-rose-400 border-rose-500/30 bg-rose-500/10';
+    s >= 80 ? 'text-emerald-400' :
+    s >= 50 ? 'text-amber-400' :
+    'text-rose-400';
 
   const passedCount = pipeline.filter(s => s.status === 'PASSED').length;
   const progress = pipeline.length > 0 ? Math.round((passedCount / pipeline.length) * 100) : 0;
@@ -240,18 +239,18 @@ export default function CandidatesDashboardPage() {
   return (
     <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 120px)', minHeight: 0 }}>
       {/* Left sub-options panel */}
-      <div style={{ width: '220px', flexShrink: 0, borderRight: '1px solid var(--border-color)', paddingRight: '16px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Candidates</h2>
+      <div style={{ width: '200px', flexShrink: 0, borderRight: '1px solid var(--border-subtle)', paddingRight: '16px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
+        <h3 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingLeft: 8 }}>Candidates</h3>
         {[
           { id: 'all', label: '👥 All Candidates' },
           { id: 'applied', label: '📥 Applications' },
           { id: 'shortlisted', label: '⭐ Shortlisted' },
           { id: 'screening', label: '📄 Resume Review' },
-          { id: 'calls', label: '📞 AI Screening Calls' },
+          { id: 'calls', label: '📞 AI screening Calls' },
           { id: 'assessments', label: '📝 Assessments' },
           { id: 'ai_interviews', label: '🤖 AI Interviews' },
-          { id: 'technical', label: '💻 Technical Interviews' },
-          { id: 'manager', label: '🏢 Hiring Manager Interviews' },
+          { id: 'technical', label: '💻 Tech Interviews' },
+          { id: 'manager', label: '🏢 Manager Reviews' },
           { id: 'hr', label: '💬 HR Discussion' },
           { id: 'offers', label: '💰 Offers' },
           { id: 'bgv', label: '🔍 Background Verification' },
@@ -261,18 +260,8 @@ export default function CandidatesDashboardPage() {
           <button
             key={t.id}
             onClick={() => { setActiveSubTab(t.id as any); setSelectedApp(null); }}
-            style={{
-              textAlign: 'left',
-              width: '100%',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '12.5px',
-              fontWeight: activeSubTab === t.id ? 700 : 400,
-              color: activeSubTab === t.id ? '#fff' : 'var(--text-secondary)',
-              background: activeSubTab === t.id ? 'rgba(99,102,241,0.15)' : 'transparent',
-              border: 'none',
-              cursor: 'pointer'
-            }}
+            className={`btn ${activeSubTab === t.id ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ textAlign: 'left', width: '100%', justifyContent: 'flex-start', padding: '6px 12px', fontSize: '12px' }}
           >
             {t.label}
           </button>
@@ -283,34 +272,36 @@ export default function CandidatesDashboardPage() {
       <div style={{ flex: 1, display: 'flex', gap: '20px', minWidth: 0, height: '100%' }}>
         
         {/* Candidates List Column */}
-        <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
+        <div style={{ width: '280px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
           <input
             type="text" placeholder="Search candidates..."
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
+            className="input"
           />
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
             {loading ? (
-              <div className="flex h-32 items-center justify-center">
-                <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+              <div style={{ display: 'flex', height: 120, alignItems: 'center', justifyContent: 'center' }}>
+                <div className="spinner" style={{ width: 24, height: 24 }} />
               </div>
             ) : getFilteredCandidates().length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-8">No candidates found.</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>No candidates found.</p>
             ) : (
               getFilteredCandidates().map(app => (
                 <div key={app.id} onClick={() => setSelectedApp(app)}
-                  className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
-                    selectedApp?.id === app.id
-                      ? 'border-violet-500/50 bg-violet-500/5 shadow-lg shadow-violet-500/10'
-                      : 'border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/70'
-                  }`}
+                  className="card"
+                  style={{
+                    padding: '12px', cursor: 'pointer',
+                    borderColor: selectedApp?.id === app.id ? 'var(--color-primary-500)' : 'var(--border-subtle)',
+                    background: selectedApp?.id === app.id ? 'rgba(99,102,241,0.06)' : 'var(--surface-2)',
+                    transition: 'all 0.15s ease'
+                  }}
                 >
-                  <div className="flex items-center gap-3">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <p className="truncate text-sm font-semibold text-white">{app.candidate_name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{app.job_title}</p>
+                      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{app.candidate_name}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{app.job_title}</p>
                     </div>
-                    <span className={`flex-shrink-0 text-xs font-bold ${scoreColor(app.fit_score)}`}>{Math.round(app.fit_score)}%</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, paddingLeft: 8 }} className={scoreColor(app.fit_score)}>{Math.round(app.fit_score)}%</span>
                   </div>
                 </div>
               ))
@@ -321,25 +312,26 @@ export default function CandidatesDashboardPage() {
         {/* Candidate Detail Column */}
         <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           {!selectedApp ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-slate-900/20 text-center p-12">
-              <div className="text-5xl">👤</div>
-              <h2 className="text-sm font-bold text-white">Select a Candidate</h2>
-              <p className="text-xs text-slate-400 max-w-xs">Click a candidate on the left to show the profile parameters on the right.</p>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>👤</div>
+              <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4 }}>Select a Candidate</h2>
+              <p style={{ fontSize: '12.5px' }}>Click a candidate on the left to show the profile parameters on the right.</p>
             </div>
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }} className="space-y-4">
-              <div className="flex justify-between items-center border-b border-white/5 pb-3">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
                 <div>
-                  <h2 className="text-lg font-black text-white">{selectedApp.candidate_name}</h2>
-                  <p className="text-xs text-slate-500">{selectedApp.candidate_email} · {selectedApp.job_title}</p>
+                  <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{selectedApp.candidate_name}</h2>
+                  <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: 2 }}>{selectedApp.candidate_email} · {selectedApp.job_title}</p>
                 </div>
-                <div className={`rounded-xl border px-3 py-1 text-center ${scoreColor(selectedApp.fit_score)}`}>
-                  <span className="text-lg font-black">{Math.round(selectedApp.fit_score)}%</span>
+                <div className="card" style={{ padding: '8px 16px', background: 'var(--surface-3)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 800 }} className={scoreColor(selectedApp.fit_score)}>{Math.round(selectedApp.fit_score)}%</span>
+                  <span style={{ fontSize: '9px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>Fit Score</span>
                 </div>
               </div>
 
               {/* Profile sub-tabs */}
-              <div className="flex border-b border-white/5 gap-1 pb-1 overflow-x-auto">
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', gap: '4px', overflowX: 'auto', paddingBottom: '6px' }}>
                 {[
                   { id: 'profile', label: 'Profile' },
                   { id: 'timeline', label: 'Timeline' },
@@ -351,11 +343,8 @@ export default function CandidatesDashboardPage() {
                   <button
                     key={t.id}
                     onClick={() => setProfileTab(t.id as any)}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border whitespace-nowrap transition ${
-                      profileTab === t.id
-                        ? 'border-violet-500 bg-violet-500/10 text-violet-300'
-                        : 'border-transparent text-slate-400 hover:text-white'
-                    }`}
+                    className={`btn ${profileTab === t.id ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+                    style={{ fontSize: '11.5px', padding: '4px 12px' }}
                   >
                     {t.label}
                   </button>
@@ -365,39 +354,52 @@ export default function CandidatesDashboardPage() {
               {/* Tab content panel */}
               <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
                 {profileTab === 'profile' && (
-                  <div className="space-y-4 text-xs">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {/* Personal data */}
-                    <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3">
-                      <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Personal Details</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <p className="text-slate-400">Current Salary: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.current_salary}</span></p>
-                        <p className="text-slate-400">Expected Salary: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.expected_salary}</span></p>
-                        <p className="text-slate-400">Notice Period: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.notice_period}</span></p>
-                        <p className="text-slate-400">Location: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.location}</span></p>
+                    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Personal Details</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px' }}>
+                        <p style={{ color: 'var(--text-secondary)' }}>Current Salary: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{selectedApp.raw_parsed_data?.current_salary}</span></p>
+                        <p style={{ color: 'var(--text-secondary)' }}>Expected Salary: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{selectedApp.raw_parsed_data?.expected_salary}</span></p>
+                        <p style={{ color: 'var(--text-secondary)' }}>Notice Period: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{selectedApp.raw_parsed_data?.notice_period}</span></p>
+                        <p style={{ color: 'var(--text-secondary)' }}>Location: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{selectedApp.raw_parsed_data?.location}</span></p>
                       </div>
                     </div>
 
-                    {/* Skills & Education */}
-                    <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-2">
-                      <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Technical Skills</h4>
-                      <div className="flex flex-wrap gap-1">
+                    {/* Skills */}
+                    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Technical Skills</h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {selectedApp.raw_parsed_data?.skills?.map(s => (
-                          <span key={s} className="rounded bg-slate-800 border border-white/5 px-2 py-0.5 text-[10px] text-slate-300">{s}</span>
+                          <span key={s} className="badge badge-default" style={{ fontSize: '11px' }}>{s}</span>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Experience & Education */}
+                    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Education Details</h4>
+                      {selectedApp.raw_parsed_data?.education?.map((edu, idx) => (
+                        <div key={idx} style={{ fontSize: '12.5px' }}>
+                          <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{edu.degree}</p>
+                          <p style={{ color: 'var(--text-secondary)' }}>{edu.school} ({edu.year})</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
                 {profileTab === 'timeline' && (
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-2">
-                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-3">Recruitment Timeline</h4>
-                    <div className="space-y-1">
+                  <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Recruitment Stages Timeline</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {pipeline.map(stage => (
-                        <div key={stage.id} className="flex items-center gap-2 py-1 text-xs">
-                          <span>{STAGE_ICONS[stage.stage_number] || '🎯'}</span>
-                          <span className="text-slate-300 font-semibold">{stage.stage_name}</span>
-                          <span className={`ml-auto text-[9px] font-bold ${getStatusStyle(stage.status)}`}>{stage.status}</span>
+                        <div key={stage.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', background: 'var(--surface-3)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span>{STAGE_ICONS[stage.stage_number] || '🎯'}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{stage.stage_name}</span>
+                          </div>
+                          <span className={`badge ${getStatusStyle(stage.status)}`}>{stage.status}</span>
                         </div>
                       ))}
                     </div>
@@ -405,49 +407,49 @@ export default function CandidatesDashboardPage() {
                 )}
 
                 {profileTab === 'assessment' && (
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3 text-xs">
-                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Assessment Dashboard</h4>
-                    <div className="grid grid-cols-2 gap-2 text-center">
-                      <div className="bg-slate-900 border border-white/5 p-2 rounded">
-                        <p className="text-[10px] text-slate-500 uppercase">MCQ Score</p>
-                        <p className="text-base font-black text-white mt-0.5">85/100</p>
+                  <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Assessment Dashboard</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div className="card" style={{ background: 'var(--surface-3)', textAlign: 'center', padding: '12px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>MCQ Aptitude</span>
+                        <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>85 / 100</p>
                       </div>
-                      <div className="bg-slate-900 border border-white/5 p-2 rounded">
-                        <p className="text-[10px] text-slate-500 uppercase">Coding Score</p>
-                        <p className="text-base font-black text-white mt-0.5">90/100</p>
+                      <div className="card" style={{ background: 'var(--surface-3)', textAlign: 'center', padding: '12px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Coding Tests</span>
+                        <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>90 / 100</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {profileTab === 'interview' && (
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3 text-xs">
-                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Interview Evaluations</h4>
-                    <div className="bg-slate-900 p-3 rounded font-mono text-[10px] text-slate-300 leading-relaxed">
-                      <p className="text-violet-400">🤖 AI Interviewer:</p>
-                      <p className="pl-3">"Candidate successfully completed all OS scheduling evaluations."</p>
+                  <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Interview Evaluators</h4>
+                    <div style={{ background: 'var(--surface-3)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 14, fontSize: '12.5px', lineHeight: 1.6, fontFamily: 'var(--font-mono)' }}>
+                      <p style={{ color: 'var(--color-primary-400)', fontWeight: 600 }}>🤖 AI Autopilot voice agent summary:</p>
+                      <p style={{ color: 'var(--text-secondary)', marginTop: 6 }}>"Candidate successfully passed asynchronous OS concurrency loops and explained multi-threading locking algorithms clearly."</p>
                     </div>
                   </div>
                 )}
 
                 {profileTab === 'documents' && (
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-2 text-xs">
-                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Document Ingestion Checklist</h4>
+                  <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Document Checklist</h4>
                     {['Government ID Card', 'Degree Graduation Certificate', 'Relieving Experience Letter'].map((doc, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-slate-900 border border-white/5 p-2.5 rounded">
-                        <span className="text-slate-300">📄 {doc}</span>
-                        <span className="text-violet-400 font-bold underline cursor-pointer text-[10px]">View Document</span>
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-3)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '12px 16px', fontSize: '13px' }}>
+                        <span style={{ color: 'var(--text-primary)' }}>📄 {doc}</span>
+                        <span className="badge badge-primary" style={{ cursor: 'pointer' }}>View File</span>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {profileTab === 'communication' && (
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3 text-xs">
-                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Recruitment Activity Feed</h4>
-                    <div className="space-y-2 font-mono text-[10px]">
-                      <p className="text-slate-400">💬 WhatsApp dispatch confirmed matching slot schedule.</p>
-                      <p className="text-slate-400">📨 Email automated screening recommendation logged.</p>
+                  <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Communication history feed</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px', fontFamily: 'var(--font-mono)' }}>
+                      <p style={{ color: 'var(--text-secondary)' }}>💬 WhatsApp reminder dispatch confirmed.</p>
+                      <p style={{ color: 'var(--text-secondary)' }}>📨 Automated email matching assessment generated.</p>
                     </div>
                   </div>
                 )}
