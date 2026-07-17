@@ -209,7 +209,7 @@ class PipelineService:
             # 1. PASS
             stage.status = "PASSED"
             stage.completed_at = datetime.now(timezone.utc)
-            stage.feedback = f"AI Auto-Passed: Score {score}% meets pass mark {pass_mark}%."
+            stage.feedback = "Congratulations! Based on your performance, you've successfully cleared this stage. I'm now arranging your next interview."
             if ai_feedback:
                 stage.feedback += f" Details: {ai_feedback}"
             
@@ -234,7 +234,7 @@ class PipelineService:
             # 2. FAIL
             stage.status = "FAILED"
             stage.completed_at = datetime.now(timezone.utc)
-            stage.feedback = f"AI Rejection: Score {score}% is below pass mark {pass_mark}%."
+            stage.feedback = "Thank you for participating in the recruitment process. After reviewing your performance, we won't be moving forward for this position. I've prepared a personalized improvement plan inside VidyamargAI."
             if ai_feedback:
                 stage.feedback += f" Details: {ai_feedback}"
                 

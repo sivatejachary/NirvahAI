@@ -176,3 +176,15 @@ async def get_bias_audit(
         "note": "Bias audit requires demographic data collection. Currently auditing stage conversions.",
         "status_distribution": status_distribution
     }
+
+
+@router.get("/morning-brief", dependencies=[Depends(require_role("tenant_admin", "hr_manager"))])
+async def get_recruiter_morning_brief(db: DBSession, tenant_id: TenantId):
+    from app.services.analytics_service import AnalyticsService
+    try:
+        brief = await AnalyticsService.generate_morning_brief(db, tenant_id)
+        return brief
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail=str(e))
+
