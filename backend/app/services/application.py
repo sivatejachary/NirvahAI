@@ -152,4 +152,12 @@ class ApplicationService:
             reason_summary=f"Ingested application from {candidate_name} with fit score {fit_score}."
         )
         
+        # 8. Initialize the 15-stage pipeline
+        from app.services.pipeline import PipelineService
+        await PipelineService.initialize_pipeline(
+            db=db,
+            tenant_id=tenant_id,
+            application_id=str(application.id)
+        )
+        
         return application

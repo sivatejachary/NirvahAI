@@ -22,3 +22,4 @@ from app.models.performance import PerformanceReview, PerformanceGoal
 from app.models.meeting import Meeting
 from app.models.warning_letter import WarningLetter
 from app.models.offboarding import OffboardingPlan, OffboardingTask
+from app.models.pipeline import ApplicationStage

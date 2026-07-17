@@ -29,6 +29,7 @@ from app.api.v1.warning_letters import router as warning_letters_router
 from app.api.v1.offboarding import router as offboarding_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.sandbox import router as sandbox_router
+from app.api.v1.pipeline import router as pipeline_router
 
 router = APIRouter()
 
@@ -58,3 +59,4 @@ router.include_router(warning_letters_router)
 router.include_router(offboarding_router)
 router.include_router(analytics_router)
 router.include_router(sandbox_router)
+router.include_router(pipeline_router)
