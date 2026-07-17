@@ -41,6 +41,10 @@ async def public_get_attempt_challenges(
     t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
     att_uuid = uuid.UUID(attempt_id) if isinstance(attempt_id, str) else attempt_id
 
+    from sqlalchemy import text
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
+
     # Load attempt details
     att_stmt = select(AssessmentAttempt).where(
         AssessmentAttempt.tenant_id == t_uuid,
@@ -98,6 +102,10 @@ async def public_submit_code_solution(
     t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
     att_uuid = uuid.UUID(attempt_id) if isinstance(attempt_id, str) else attempt_id
     chall_uuid = uuid.UUID(body.challenge_id) if isinstance(body.challenge_id, str) else body.challenge_id
+
+    from sqlalchemy import text
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
 
     # Verify attempt
     att_stmt = select(AssessmentAttempt).where(
