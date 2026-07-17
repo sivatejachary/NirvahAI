@@ -48,3 +48,10 @@ class Job(Base, TenantMixin, TimestampMixin):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )
+    
+    employment_type: Mapped[Optional[str]] = mapped_column(String(50), default="FULL_TIME", nullable=True)
+    location_type: Mapped[Optional[str]] = mapped_column(String(50), default="REMOTE", nullable=True)
+    salary_min: Mapped[Optional[int]] = mapped_column(nullable=True)
+    salary_max: Mapped[Optional[int]] = mapped_column(nullable=True)
+    currency: Mapped[Optional[str]] = mapped_column(String(10), default="USD", nullable=True)
+
