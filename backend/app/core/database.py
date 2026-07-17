@@ -149,7 +149,7 @@ async def get_db_with_tenant(
             # Set the tenant context for PostgreSQL RLS policies
             if "sqlite" not in str(session.bind.url):
                 await session.execute(
-                    text("SET LOCAL app.current_tenant_id = :tenant_id"),
+                    text("SELECT set_config('app.current_tenant_id', :tenant_id, true)"),
                     {"tenant_id": str(tenant_id)},
                 )
             yield session

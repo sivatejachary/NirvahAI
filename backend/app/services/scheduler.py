@@ -129,7 +129,7 @@ class SchedulerService:
         app_uuid = uuid.UUID(application_id) if isinstance(application_id, str) else application_id
         int_uuid = uuid.UUID(interviewer_id) if isinstance(interviewer_id, str) else interviewer_id
 
-        start_time = datetime.fromisoformat(start_time_iso)
+        start_time = datetime.fromisoformat(start_time_iso).replace(tzinfo=None)
         end_time = start_time + timedelta(hours=1)
 
         # 1. Double check slot availability
@@ -138,7 +138,9 @@ class SchedulerService:
         )
         existing = (await db.execute(book_stmt)).scalars().all()
         for b in existing:
-            if not (end_time <= b.start_time or start_time >= b.end_time):
+            b_start = b.start_time.replace(tzinfo=None) if b.start_time.tzinfo else b.start_time
+            b_end = b.end_time.replace(tzinfo=None) if b.end_time.tzinfo else b.end_time
+            if not (end_time <= b_start or start_time >= b_end):
                 raise ValueError("The requested slot has already been booked by another candidate.")
 
         # 2. Save Booking details

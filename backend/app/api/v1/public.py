@@ -55,7 +55,7 @@ async def public_list_jobs(
     t_uuid = _uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
     stmt = select(Job).where(
         Job.tenant_id == t_uuid,
-        Job.status.in_(["PUBLISHED", "APPROVED"])
+        Job.status.in_(["PUBLISHED", "APPROVED", "DRAFT"])
     ).order_by(Job.created_at.desc())
     result = await db.execute(stmt)
     jobs = result.scalars().all()
@@ -162,6 +162,67 @@ async def public_submit_application(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@router.get("/applications/status")
+async def public_get_application_status(
+    db: DBSession,
+    tenant_id: TenantId,
+    email: Optional[str] = None,
+    application_id: Optional[str] = None,
+):
+    """
+    Get application status for candidate by email or application_id — no auth required.
+    Used by VidyamargAI to display candidate application status in real-time.
+    """
+    from sqlalchemy import select
+    from app.models.application import Application
+    from app.models.job import Job
+    import uuid as _uuid
+
+    t_uuid = _uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    stmt = select(Application, Job.title.label("job_title")).join(Job, Application.job_id == Job.id).where(Application.tenant_id == t_uuid)
+    
+    if application_id:
+        try:
+            app_uuid = _uuid.UUID(application_id)
+            stmt = stmt.where(Application.id == app_uuid)
+        except ValueError:
+            pass
+    elif email:
+        stmt = stmt.where(Application.candidate_email == email.strip())
+    else:
+        return []
+
+    stmt = stmt.order_by(Application.created_at.desc())
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    STATUS_MAP = {
+        "APPLIED": "applied",
+        "MCQ_STAGE": "applied",
+        "CODING_STAGE": "interview_scheduled",
+        "INTERVIEW_STAGE": "interview_scheduled",
+        "OFFER_STAGE": "offer_received",
+        "COMPLETED": "offer_received",
+        "REJECTED": "rejected",
+    }
+
+    return [
+        {
+            "id": str(app.id),
+            "job_id": str(app.job_id),
+            "job_title": job_title,
+            "company_name": "NirvahAI HR Agent",
+            "candidate_name": app.candidate_name,
+            "candidate_email": app.candidate_email,
+            "raw_status": app.status,
+            "status": STATUS_MAP.get(app.status, "applied"),
+            "fit_score": app.fit_score,
+            "applied_at": app.created_at.isoformat() if app.created_at else None,
+        }
+        for app, job_title in rows
+    ]
 
 
 @router.post("/consent")

@@ -63,8 +63,8 @@ class InterviewBooking(Base, TenantMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("interviewer_schedules.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
-    start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    end_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     meeting_link: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 

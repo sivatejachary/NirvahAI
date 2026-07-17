@@ -42,19 +42,20 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         # Allow public paths, but resolve tenant_id from slug header or JWT token
         is_public = self._is_public_path(request.url.path) or request.url.path.startswith("/api/v1/public/")
         if is_public:
-            tenant_slug = request.headers.get("X-Tenant-Slug")
-            if tenant_slug:
-                from app.core.database import AsyncSessionLocal
-                from sqlalchemy import select
-                from app.models.tenant import Tenant
-                async with AsyncSessionLocal() as session:
-                    stmt = select(Tenant.id).where(Tenant.company_slug == tenant_slug)
-                    res = await session.execute(stmt)
-                    t_id = res.scalar_one_or_none()
-                    if t_id:
-                        request.state.tenant_id = str(t_id)
-            else:
-                # Fallback to decode bearer token if present
+            tenant_slug = request.headers.get("X-Tenant-Slug") or "dev-tenant"
+            from app.core.database import AsyncSessionLocal
+            from sqlalchemy import select
+            from app.models.tenant import Tenant
+            async with AsyncSessionLocal() as session:
+                stmt = select(Tenant.id).where(Tenant.company_slug == tenant_slug)
+                res = await session.execute(stmt)
+                t_id = res.scalar_one_or_none()
+                if not t_id:
+                    res2 = await session.execute(select(Tenant.id).limit(1))
+                    t_id = res2.scalar_one_or_none()
+                if t_id:
+                    request.state.tenant_id = str(t_id)
+            if not getattr(request.state, "tenant_id", None):
                 token = self._extract_bearer_token(request)
                 if token:
                     try:

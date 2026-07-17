@@ -31,7 +31,7 @@ async def get_db(request: Request) -> AsyncSession:
             if tenant_id and "sqlite" not in str(session.bind.url):
                 from sqlalchemy import text
                 await session.execute(
-                    text("SET LOCAL app.current_tenant_id = :tid"),
+                    text("SELECT set_config('app.current_tenant_id', :tid, true)"),
                     {"tid": str(tenant_id)},
                 )
             yield session
