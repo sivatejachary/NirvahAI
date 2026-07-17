@@ -410,21 +410,43 @@ export default function CandidatesDashboardPage() {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
+                    onClick={() => handleUpdateStatus(selectedApp.id, 'APPLIED')}
+                    disabled={actionLoading}
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold text-center transition ${
+                      selectedApp.status === 'APPLIED'
+                        ? 'bg-blue-600 text-white shadow-glow-primary'
+                        : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    Applied (Review)
+                  </button>
+                  <button
                     onClick={() => handleUpdateStatus(selectedApp.id, 'MCQ_STAGE')}
                     disabled={actionLoading}
                     className={`rounded-lg px-3 py-2 text-xs font-semibold text-center transition ${
                       selectedApp.status === 'MCQ_STAGE'
-                        ? 'bg-indigo-600 text-white shadow-glow-primary'
+                        ? 'bg-violet-600 text-white shadow-glow-primary'
                         : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800'
                     }`}
                   >
-                    MCQ Stage
+                    MCQ Assessment
                   </button>
                   <button
-                    onClick={() => handleUpdateStatus(selectedApp.id, 'TECHNICAL_INTERVIEW_STAGE')}
+                    onClick={() => handleUpdateStatus(selectedApp.id, 'CODING_STAGE')}
                     disabled={actionLoading}
                     className={`rounded-lg px-3 py-2 text-xs font-semibold text-center transition ${
-                      selectedApp.status === 'TECHNICAL_INTERVIEW_STAGE'
+                      selectedApp.status === 'CODING_STAGE'
+                        ? 'bg-fuchsia-600 text-white shadow-glow-primary'
+                        : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    Coding Challenge
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedApp.id, 'INTERVIEW_STAGE')}
+                    disabled={actionLoading}
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold text-center transition ${
+                      selectedApp.status === 'INTERVIEW_STAGE'
                         ? 'bg-indigo-600 text-white shadow-glow-primary'
                         : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800'
                     }`}
@@ -434,13 +456,24 @@ export default function CandidatesDashboardPage() {
                   <button
                     onClick={() => handleUpdateStatus(selectedApp.id, 'OFFER_STAGE')}
                     disabled={actionLoading}
-                    className={`col-span-2 rounded-lg px-3 py-2 text-xs font-semibold text-center transition ${
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold text-center transition ${
                       selectedApp.status === 'OFFER_STAGE'
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-emerald-600 text-white font-bold'
                         : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800'
                     }`}
                   >
                     Extend Job Offer
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedApp.id, 'REJECTED')}
+                    disabled={actionLoading}
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold text-center transition ${
+                      selectedApp.status === 'REJECTED'
+                        ? 'bg-rose-600 text-white font-bold'
+                        : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    Reject Candidate
                   </button>
                 </div>
               </div>
