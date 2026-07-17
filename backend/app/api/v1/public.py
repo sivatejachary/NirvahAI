@@ -26,6 +26,7 @@ class ApplicationIngest(BaseModel):
     candidate_email: EmailStr
     resume_text: str
     resume_url: Optional[str] = None
+    gdpr_consent: bool = False  # When True, auto-records consent so candidate does not need a prior consent step
 
 
 class CandidateConsentByEmail(BaseModel):
@@ -157,6 +158,20 @@ async def public_submit_application(
         from sqlalchemy import text
         if "sqlite" not in str(db.bind.url):
             await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
+
+        # Auto-record consent when candidate explicitly agrees at apply-time
+        if body.gdpr_consent:
+            candidate_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, str(body.candidate_email))
+            await compliance_svc.log_consent(
+                db,
+                tenant_id=tenant_id,
+                candidate_id=str(candidate_uuid),
+                workflow_stage="APPLICATION",
+                consent_status=True,
+                consent_method="AUTO_APPLY",
+                verification_metadata={"source": "VidyamargAI auto-apply"},
+            )
+
         application = await ApplicationService.submit_application(
             db=db,
             tenant_id=tenant_id,
