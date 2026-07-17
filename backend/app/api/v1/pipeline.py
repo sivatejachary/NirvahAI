@@ -1,7 +1,8 @@
 """
 Recruitment Pipeline API
+Allows recruiters to view and configure dynamic workflows, update stage progress, and trigger AI evaluations.
 """
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import uuid
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
@@ -9,7 +10,8 @@ from sqlalchemy import select
 
 from app.api.deps import DBSession, TenantId, require_role
 from app.models.pipeline import ApplicationStage
-from app.services.pipeline import PipelineService
+from app.models.tenant import CompanySettings
+from app.services.pipeline import PipelineService, DEFAULT_WORKFLOW
 
 router = APIRouter(prefix="/pipeline", tags=["Recruitment Pipeline"])
 
@@ -20,6 +22,26 @@ class StageUpdateRequest(BaseModel):
     feedback: Optional[str] = None
     ai_recommendation: Optional[str] = None
     recruiter_feedback: Optional[str] = None
+
+
+class WorkflowStageConfig(BaseModel):
+    stage_number: int
+    stage_name: str
+    enabled: bool
+    pass_mark: float
+    ai_confidence_threshold: float
+    require_human_approval: bool
+    notifications: Dict[str, bool] = {"email": True, "whatsapp": True, "sms": False, "in_app": True}
+
+
+class WorkflowUpdateRequest(BaseModel):
+    stages: List[WorkflowStageConfig]
+
+
+class EvaluateStageRequest(BaseModel):
+    score: float
+    ai_confidence: float = 1.0
+    ai_feedback: Optional[str] = None
 
 
 @router.get("/applications/{application_id}/stages",
@@ -56,6 +78,7 @@ async def update_pipeline_stage(
 ):
     t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
     a_uuid = uuid.UUID(application_id) if isinstance(application_id, str) else application_id
+    
     stmt = select(ApplicationStage).where(
         ApplicationStage.tenant_id == t_uuid,
         ApplicationStage.application_id == a_uuid,
@@ -64,6 +87,7 @@ async def update_pipeline_stage(
     stage = (await db.execute(stmt)).scalar_one_or_none()
     if not stage:
         raise HTTPException(status_code=404, detail="Stage not found.")
+        
     stage.status = body.status
     if body.score is not None:
         stage.score = body.score
@@ -74,17 +98,21 @@ async def update_pipeline_stage(
     if body.recruiter_feedback:
         stage.recruiter_feedback = body.recruiter_feedback
     stage.manually_overridden = True
-    if body.status == "PASSED" and stage_number < 15:
-        next_stmt = select(ApplicationStage).where(
-            ApplicationStage.tenant_id == t_uuid,
-            ApplicationStage.application_id == a_uuid,
-            ApplicationStage.stage_number == stage_number + 1
-        )
-        next_stage = (await db.execute(next_stmt)).scalar_one_or_none()
+    
+    # If PASSED, unlock next stage in sequential order
+    if body.status == "PASSED":
+        stages_list = await PipelineService.get_pipeline(db, tenant_id, application_id)
+        next_stage = None
+        for s in stages_list:
+            if s.stage_number > stage_number:
+                next_stage = s
+                break
         if next_stage and next_stage.status == "LOCKED":
             next_stage.status = "PENDING"
+            
     await db.commit()
     await db.refresh(stage)
+    
     background_tasks.add_task(
         PipelineService._sync_to_vidyamargai,
         application_id=application_id, stage_number=stage_number,
@@ -99,3 +127,72 @@ async def initialize_application_pipeline(db: DBSession, tenant_id: TenantId, ap
     stages = await PipelineService.initialize_pipeline(db, tenant_id, application_id)
     await db.commit()
     return {"success": True, "stages_created": len(stages)}
+
+
+# ── Dynamic Recruitment Workflow Settings ────────────────────────────────────
+
+@router.get("/company/settings/workflow",
+            dependencies=[Depends(require_role("tenant_admin", "hr_manager"))])
+async def get_company_workflow(db: DBSession, tenant_id: TenantId):
+    t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    
+    stmt = select(CompanySettings).where(CompanySettings.tenant_id == t_uuid)
+    settings = (await db.execute(stmt)).scalar_one_or_none()
+    
+    if not settings or not settings.recruitment_workflow or "stages" not in settings.recruitment_workflow:
+        return DEFAULT_WORKFLOW
+        
+    return settings.recruitment_workflow
+
+
+@router.patch("/company/settings/workflow",
+              dependencies=[Depends(require_role("tenant_admin"))])
+async def update_company_workflow(body: WorkflowUpdateRequest, db: DBSession, tenant_id: TenantId):
+    t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    
+    stmt = select(CompanySettings).where(CompanySettings.tenant_id == t_uuid)
+    settings = (await db.execute(stmt)).scalar_one_or_none()
+    
+    if not settings:
+        settings = CompanySettings(tenant_id=t_uuid)
+        db.add(settings)
+        
+    # Serialize request body
+    stages_serialized = []
+    for s in body.stages:
+        stages_serialized.append({
+            "stage_number": s.stage_number,
+            "stage_name": s.stage_name,
+            "enabled": s.enabled,
+            "pass_mark": s.pass_mark,
+            "ai_confidence_threshold": s.ai_confidence_threshold,
+            "require_human_approval": s.require_human_approval,
+            "notifications": s.notifications
+        })
+        
+    settings.recruitment_workflow = {"stages": stages_serialized}
+    await db.commit()
+    return {"success": True, "workflow": settings.recruitment_workflow}
+
+
+@router.post("/applications/{application_id}/stages/{stage_number}/evaluate",
+             dependencies=[Depends(require_role("tenant_admin", "hr_manager", "hr_recruiter"))])
+async def evaluate_candidate_stage(
+    application_id: str, stage_number: int, body: EvaluateStageRequest,
+    db: DBSession, tenant_id: TenantId
+):
+    stage = await PipelineService.evaluate_stage(
+        db=db,
+        tenant_id=tenant_id,
+        application_id=application_id,
+        stage_number=stage_number,
+        score=body.score,
+        ai_confidence=body.ai_confidence,
+        ai_feedback=body.ai_feedback
+    )
+    
+    if not stage:
+        raise HTTPException(status_code=404, detail="Application stage not found.")
+        
+    await db.commit()
+    return {"success": True, "status": stage.status, "feedback": stage.feedback}

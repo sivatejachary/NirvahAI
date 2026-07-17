@@ -115,6 +115,9 @@ class CompanySettings(Base, TimestampMixin):
     daily_ai_budget_usd: Mapped[Optional[float]] = mapped_column()
     monthly_ai_budget_usd: Mapped[Optional[float]] = mapped_column()
 
+    # Dynamic sequential recruitment workflow configuration per company
+    recruitment_workflow: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
+
     tenant: Mapped["Tenant"] = relationship(back_populates="settings")
 
     def __repr__(self) -> str:
