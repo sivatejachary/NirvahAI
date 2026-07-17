@@ -6,19 +6,19 @@ export default function CallsPage() {
   const [activeVoiceTab, setActiveVoiceTab] = useState<'overview' | 'analytics' | 'history' | 'templates'>('overview');
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-xl font-bold text-white">HR Voice Center</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Autonomous voice agents, realtime calling and speech recognition</p>
+          <h1 style={{ fontSize: '20px', fontWeight: 800 }}>HR Voice Center</h1>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: 2 }}>Autonomous voice agents, realtime calling and speech recognition</p>
         </div>
-        <span className="rounded bg-violet-500/10 border border-violet-500/20 px-3 py-1 text-xs font-black text-violet-400 uppercase tracking-widest animate-pulse">
+        <span className="badge badge-primary" style={{ padding: '6px 12px', fontSize: '11px', animation: 'pulse 2s infinite' }}>
           🎙️ AI Realtime Voice
         </span>
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-white/5 gap-2 pb-1 overflow-x-auto">
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', gap: '4px', paddingBottom: '6px', overflowX: 'auto' }}>
         {[
           { id: 'overview', label: '📞 Agent Overview' },
           { id: 'analytics', label: '📊 Call Analytics' },
@@ -28,11 +28,8 @@ export default function CallsPage() {
           <button
             key={t.id}
             onClick={() => setActiveVoiceTab(t.id as any)}
-            className={`px-4 py-2 text-xs font-bold rounded-lg border whitespace-nowrap transition ${
-              activeVoiceTab === t.id
-                ? 'border-violet-500 bg-violet-500/10 text-violet-300'
-                : 'border-transparent text-slate-400 hover:text-white'
-            }`}
+            className={`btn ${activeVoiceTab === t.id ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+            style={{ fontSize: '12px', padding: '6px 16px' }}
           >
             {t.label}
           </button>
@@ -40,25 +37,25 @@ export default function CallsPage() {
       </div>
 
       {activeVoiceTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div style={{ display: 'flex', gap: '20px' }}>
           {/* Main info panel */}
-          <div className="lg:col-span-2 rounded-2xl border border-dashed border-white/10 p-12 text-center bg-slate-900/20 flex flex-col items-center justify-center gap-4">
-            <div className="text-7xl animate-bounce">🎙️</div>
-            <h2 className="text-lg font-bold text-white">Realtime Voice Calling Coming Soon</h2>
-            <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+          <div className="card" style={{ flex: 2, borderStyle: 'dashed', textAlign: 'center', padding: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+            <div style={{ fontSize: '64px', animation: 'bounce 2s infinite' }}>🎙️</div>
+            <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Realtime Voice Calling Coming Soon</h2>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', maxWidth: '380px', lineHeight: 1.6 }}>
               We are finalizing live Twilio &amp; VAPI integrations to enable fully autonomous speech interviews, phone screenings and smart voice call campaigns.
             </p>
-            <div className="flex gap-2">
-              <span className="rounded-full bg-slate-800 border border-white/5 px-3 py-1 text-[10px] text-slate-300">Autopilot Dialing</span>
-              <span className="rounded-full bg-slate-800 border border-white/5 px-3 py-1 text-[10px] text-slate-300">Live Speech to Text</span>
-              <span className="rounded-full bg-slate-800 border border-white/5 px-3 py-1 text-[10px] text-slate-300">Voice Sentiment AI</span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <span className="badge badge-default" style={{ fontSize: '10px' }}>Autopilot Dialing</span>
+              <span className="badge badge-default" style={{ fontSize: '10px' }}>Live Speech to Text</span>
+              <span className="badge badge-default" style={{ fontSize: '10px' }}>Voice Sentiment AI</span>
             </div>
           </div>
 
           {/* Config card */}
-          <div className="rounded-xl border border-white/5 bg-slate-900/40 p-5 space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Voice Feature Checklist</h3>
-            <div className="space-y-3 text-xs">
+          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h3 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Voice Feature Checklist</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
               {[
                 { title: 'Autonomous Outbound Calling', desc: 'Auto-dial shortlists to verify salary & notice period.' },
                 { title: 'Inbound Candidate Line', desc: 'Direct phone number for candidates to start voice screenings.' },
@@ -66,11 +63,11 @@ export default function CallsPage() {
                 { title: 'Conversation Memory Hub', desc: 'Per-candidate phone history & transcript summaries.' },
                 { title: 'Telephony Carrier Config', desc: 'Integrate custom numbers, SIP trunks and call recording.' }
               ].map((item, idx) => (
-                <div key={idx} className="flex gap-3 bg-slate-950/40 p-3 rounded-lg border border-white/5">
-                  <span className="text-base flex-shrink-0">⚙️</span>
+                <div key={idx} style={{ display: 'flex', gap: '10px', background: 'var(--surface-3)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '12px' }}>
+                  <span style={{ fontSize: '16px' }}>⚙️</span>
                   <div>
-                    <h4 className="font-bold text-white">{item.title}</h4>
-                    <p className="text-slate-400 mt-0.5 leading-relaxed">{item.desc}</p>
+                    <h4 style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.title}</h4>
+                    <p style={{ color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -80,23 +77,23 @@ export default function CallsPage() {
       )}
 
       {activeVoiceTab === 'analytics' && (
-        <div className="rounded-xl border border-white/5 bg-slate-900/40 p-12 text-center text-slate-500">
-          <div className="text-4xl mb-3">📊</div>
-          <p className="text-sm font-semibold text-slate-300">Call analytics dashboard will load once carrier services are linked.</p>
+        <div className="card" style={{ borderStyle: 'dashed', padding: '48px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📊</div>
+          <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Call analytics dashboard will load once carrier services are linked.</p>
         </div>
       )}
 
       {activeVoiceTab === 'history' && (
-        <div className="rounded-xl border border-white/5 bg-slate-900/40 p-12 text-center text-slate-500">
-          <div className="text-4xl mb-3">📜</div>
-          <p className="text-sm font-semibold text-slate-300">No outbound call logs recorded in history logs.</p>
+        <div className="card" style={{ borderStyle: 'dashed', padding: '48px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📜</div>
+          <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>No outbound call logs recorded in history logs.</p>
         </div>
       )}
 
       {activeVoiceTab === 'templates' && (
-        <div className="rounded-xl border border-white/5 bg-slate-900/40 p-12 text-center text-slate-500">
-          <div className="text-4xl mb-3">📄</div>
-          <p className="text-sm font-semibold text-slate-300">Customize greeting messages, voice agent scripts and dialog rules here.</p>
+        <div className="card" style={{ borderStyle: 'dashed', padding: '48px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
+          <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Customize greeting messages, voice agent scripts and dialog rules here.</p>
         </div>
       )}
     </div>

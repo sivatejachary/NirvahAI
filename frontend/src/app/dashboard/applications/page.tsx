@@ -61,54 +61,56 @@ export default function ApplicationsPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-xl font-bold text-white">All Applications</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Comprehensive view of all candidate applications received</p>
+          <h1 style={{ fontSize: '20px', fontWeight: 800 }}>All Applications</h1>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: 2 }}>Comprehensive view of all candidate applications received</p>
         </div>
         <input type="text" placeholder="Search applications..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-          className="rounded-lg border border-white/10 bg-slate-900 px-4 py-2 text-xs text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none w-64" />
+          className="input" style={{ width: '260px' }} />
       </div>
 
-      {errorMsg && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">{errorMsg}</div>}
+      {errorMsg && <div className="alert alert-error">{errorMsg}</div>}
 
       {loading ? (
-        <div className="flex h-40 items-center justify-center">
-          <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+        <div style={{ display: 'flex', height: 120, alignItems: 'center', justifyContent: 'center' }}>
+          <div className="spinner" style={{ width: 24, height: 24 }} />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-slate-500">
-          <div className="text-4xl mb-3">📥</div>
-          <p className="text-sm">No applications found.</p>
+        <div style={{ border: '1px dashed var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📥</div>
+          <p>No applications found.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/5 bg-slate-900/20 overflow-hidden">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/60 text-slate-400 font-semibold uppercase border-b border-white/5">
+        <div className="table-wrapper">
+          <table>
+            <thead>
               <tr>
-                <th className="p-4">Candidate</th>
-                <th className="p-4">Job Role</th>
-                <th className="p-4">ATS Match</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Applied Date</th>
+                <th>Candidate</th>
+                <th>Job Role</th>
+                <th>ATS Match</th>
+                <th>Status</th>
+                <th>Applied Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-slate-300">
+            <tbody>
               {filtered.map(app => (
-                <tr key={app.id} className="hover:bg-white/3 transition">
-                  <td className="p-4 font-medium text-white">
+                <tr key={app.id}>
+                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                     <div>{app.candidate_name}</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">{app.candidate_email}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 400 }}>{app.candidate_email}</div>
                   </td>
-                  <td className="p-4">{app.job_title}</td>
-                  <td className="p-4 font-bold text-violet-400">{Math.round(app.fit_score)}%</td>
-                  <td className="p-4">
-                    <span className="rounded bg-slate-800 px-2 py-0.5 text-[9px] font-black uppercase text-slate-300 border border-white/5">
-                      {app.status.replace('_STAGE', '')}
-                    </span>
+                  <td>{app.job_title}</td>
+                  <td style={{ fontWeight: 700, color: app.fit_score >= 80 ? 'var(--color-accent-400)' : 'var(--color-primary-400)' }}>
+                    {Math.round(app.fit_score)}%
                   </td>
-                  <td className="p-4 text-slate-500">{new Date(app.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <span className="badge badge-primary">{app.status}</span>
+                  </td>
+                  <td style={{ color: 'var(--text-secondary)' }}>
+                    {new Date(app.created_at).toLocaleDateString()}
+                  </td>
                 </tr>
               ))}
             </tbody>

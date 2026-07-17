@@ -41,7 +41,6 @@ export default function CodingAssessmentsPage() {
     setErrorMsg('');
     const headers = getHeaders();
     try {
-      // Mock submissions since the endpoint returns actual candidate submissions
       const [appRes, jobsRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications`, { headers }),
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, { headers })
@@ -52,7 +51,6 @@ export default function CodingAssessmentsPage() {
       if (appRes.ok) appsData = await appRes.json();
       if (jobsRes.ok) jobsData = await jobsRes.json();
 
-      // Synthesize coding assessment cards for candidates in CODING_STAGE or completed ones
       const dummySubmissions: CodingSubmission[] = appsData.map((app, idx) => ({
         id: `coding-sub-${app.id}`,
         application_id: app.id,
@@ -99,7 +97,7 @@ export default function CodingAssessmentsPage() {
         body: JSON.stringify({ status })
       });
       if (res.ok) {
-        setSuccessMsg(`Coding evaluation successfully updated to ${status}`);
+        setSuccessMsg(`Candidate marked as ${status}`);
         await loadData();
         setSelectedSub(null);
         setTimeout(() => setSuccessMsg(''), 3000);
@@ -113,47 +111,46 @@ export default function CodingAssessmentsPage() {
     }
   };
 
+  const scoreColor = (pct: number) =>
+    pct >= 80 ? 'text-emerald-400' :
+    pct >= 50 ? 'text-amber-400' :
+    'text-rose-400';
+
   return (
     <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 100px)', minHeight: 0 }}>
-      {/* Left panel: Submissions list */}
-      <div style={{ width: '360px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Left Submissions List */}
+      <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <h1 className="text-xl font-bold text-white">Coding Assessments</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Static code reviews & compiler diagnostics</p>
+          <h1 style={{ fontSize: '18px', fontWeight: 800 }}>Coding Assessment Console</h1>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: 2 }}>Sandbox executor & code reviews</p>
         </div>
-        {successMsg && <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-400">{successMsg}</div>}
-        {errorMsg && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">{errorMsg}</div>}
+        {successMsg && <div className="alert alert-success">{successMsg}</div>}
+        {errorMsg && <div className="alert alert-error">{errorMsg}</div>}
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
           {loading ? (
-            <div className="flex h-40 items-center justify-center">
-              <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            <div style={{ display: 'flex', height: 120, alignItems: 'center', justifyContent: 'center' }}>
+              <div className="spinner" style={{ width: 24, height: 24 }} />
             </div>
           ) : submissions.length === 0 ? (
-            <div className="flex h-40 items-center justify-center text-xs text-slate-500">No submissions found.</div>
+            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>No coding attempts recorded.</p>
           ) : (
             submissions.map(sub => (
               <div key={sub.id} onClick={() => setSelectedSub(sub)}
-                className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
-                  selectedSub?.id === sub.id
-                    ? 'border-violet-500/50 bg-violet-500/5 shadow-lg shadow-violet-500/10'
-                    : 'border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/70'
-                }`}
+                className="card"
+                style={{
+                  padding: '12px', cursor: 'pointer',
+                  borderColor: selectedSub?.id === sub.id ? 'var(--color-primary-500)' : 'var(--border-subtle)',
+                  background: selectedSub?.id === sub.id ? 'rgba(99,102,241,0.06)' : 'var(--surface-2)',
+                  transition: 'all 0.15s ease'
+                }}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{sub.candidate_name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{sub.job_title}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub.candidate_name}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{sub.job_title} · {sub.language}</p>
                   </div>
-                  {sub.plagiarism_detected && (
-                    <span className="rounded bg-rose-500/20 border border-rose-500/40 px-1.5 py-0.5 text-[8px] font-black text-rose-400 uppercase">
-                      ⚠️ Plagiarized
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 flex justify-between items-center text-xs">
-                  <span className="text-slate-400">{sub.language} · {sub.passed_tests}/{sub.total_tests} Tests</span>
-                  <span className={`font-bold ${sub.score >= 70 ? 'text-emerald-400' : sub.score >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, paddingLeft: 8 }} className={scoreColor(sub.score)}>
                     {sub.score}%
                   </span>
                 </div>
@@ -163,74 +160,84 @@ export default function CodingAssessmentsPage() {
         </div>
       </div>
 
-      {/* Right panel: Details */}
+      {/* Right Details Panel */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {!selectedSub ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-slate-900/20 text-center p-12">
-            <div className="text-6xl">💻</div>
-            <h2 className="text-lg font-semibold text-white">Select a Code Submission</h2>
-            <p className="text-sm text-slate-400 max-w-xs">Review source code, compiler outputs, plagiarism indicators, strengths, and weaknesses.</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>💻</div>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4 }}>Select a Submission</h2>
+            <p style={{ fontSize: '12.5px' }}>Verify compilation logs, check plagiarism risk flags, review logic Evictions, and pass candidates.</p>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '20px' }}>
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
               <div>
-                <h2 className="text-xl font-bold text-white">{selectedSub.candidate_name}</h2>
-                <p className="text-xs text-slate-400">{selectedSub.candidate_email} · {selectedSub.job_title}</p>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{selectedSub.candidate_name}</h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: 2 }}>{selectedSub.candidate_email} · {selectedSub.job_title}</p>
               </div>
-              <div className="flex gap-4">
-                <div className="text-center rounded-lg border border-white/5 bg-slate-900/30 px-3 py-1.5">
-                  <p className="text-lg font-black text-violet-400">{selectedSub.score}%</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase">Tests Passed</p>
-                </div>
-                <div className="text-center rounded-lg border border-white/5 bg-slate-900/30 px-3 py-1.5">
-                  <p className="text-sm font-black text-white">{selectedSub.language}</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase">Language</p>
-                </div>
+              <div className="card" style={{ padding: '8px 16px', background: 'var(--surface-3)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: 800 }} className={scoreColor(selectedSub.score)}>{selectedSub.score}%</span>
+                <span style={{ fontSize: '9px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>Compiler Grade</span>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto' }} className="space-y-4 pr-2">
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Problem Statement</h3>
-                <p className="text-xs text-slate-300 bg-slate-950/40 p-3 rounded-lg border border-white/5 leading-relaxed">{selectedSub.problem_statement}</p>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Plagiarism Risk */}
+              {selectedSub.plagiarism_detected && (
+                <div className="alert alert-error" style={{ fontSize: '12px' }}>
+                  🚨 Warning: Plagiarism/Copied-Code telemetry flags generated for this compilation!
+                </div>
+              )}
+
+              {/* Problem statement */}
+              <div className="card">
+                <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: '8px' }}>Challenge Specification</h4>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>{selectedSub.problem_statement}</p>
               </div>
 
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Candidate Source Code</h3>
-                <pre className="rounded-xl border border-white/5 bg-slate-950 p-4 text-[11px] font-mono text-emerald-400 overflow-x-auto leading-relaxed">
-                  <code>{selectedSub.code}</code>
+              {/* Code Editor */}
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ background: 'var(--surface-3)', padding: '8px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>Candidate Solution ({selectedSub.language})</span>
+                  <span style={{ fontSize: '11px', color: 'var(--color-primary-400)', fontWeight: 600 }}>Passed Tests: {selectedSub.passed_tests}/{selectedSub.total_tests}</span>
+                </div>
+                <pre style={{ margin: 0, padding: 16, background: 'var(--surface-0)', color: '#a7f3d0', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', lineHeight: 1.5 }}>
+                  {selectedSub.code}
                 </pre>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl border border-white/5 bg-slate-900/10 p-3.5">
-                  <h4 className="text-xs font-bold text-emerald-400 mb-1.5">🔑 Strengths</h4>
-                  <ul className="list-disc pl-4 text-xs text-slate-300 space-y-1">
-                    {selectedSub.ai_analysis?.strengths?.map((s, i) => <li key={i}>{s}</li>)}
-                  </ul>
+              {/* AI review feedback */}
+              {selectedSub.ai_analysis && (
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>🤖 AI Sandbox Code Review</h4>
+                  <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedSub.ai_analysis.feedback}</p>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px', marginTop: '6px' }}>
+                    <div>
+                      <span style={{ color: 'var(--color-accent-400)', fontWeight: 600 }}>Strengths:</span>
+                      <ul style={{ paddingLeft: '16px', marginTop: '4px', listStyleType: 'disc', color: 'var(--text-secondary)' }}>
+                        {selectedSub.ai_analysis.strengths?.map((s, idx) => <li key={idx}>{s}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-error-400)', fontWeight: 600 }}>Eviction Notes:</span>
+                      <ul style={{ paddingLeft: '16px', marginTop: '4px', listStyleType: 'disc', color: 'var(--text-secondary)' }}>
+                        {selectedSub.ai_analysis.weaknesses?.map((w, idx) => <li key={idx}>{w}</li>)}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-white/5 bg-slate-900/10 p-3.5">
-                  <h4 className="text-xs font-bold text-rose-400 mb-1.5">⚠️ Weaknesses</h4>
-                  <ul className="list-disc pl-4 text-xs text-slate-300 space-y-1">
-                    {selectedSub.ai_analysis?.weaknesses?.map((w, i) => <li key={i}>{w}</li>)}
-                  </ul>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                <h4 className="text-xs font-bold text-violet-400 uppercase mb-1">🤖 AI Code Quality Review</h4>
-                <p className="text-xs text-slate-300 leading-relaxed">{selectedSub.ai_analysis?.feedback}</p>
-              </div>
+              )}
             </div>
 
-            <div className="border-t border-white/5 pt-4 flex gap-3">
-              <button onClick={() => handleDecision(selectedSub.application_id, 'INTERVIEW_STAGE')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white hover:bg-emerald-500 transition disabled:opacity-50">
-                Pass (Move to AI Technical Interview)
+            {/* Actions */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', display: 'flex', gap: '12px' }}>
+              <button onClick={() => handleDecision(selectedSub.application_id, 'AI_INTERVIEW_STAGE')} disabled={actionLoading}
+                className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                Pass Assessment (Move to AI Interview)
               </button>
               <button onClick={() => handleDecision(selectedSub.application_id, 'REJECTED')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-rose-600/20 border border-rose-500/30 py-3 text-xs font-bold text-rose-400 hover:bg-rose-600/30 transition disabled:opacity-50">
+                className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }}>
                 Reject Candidate
               </button>
             </div>

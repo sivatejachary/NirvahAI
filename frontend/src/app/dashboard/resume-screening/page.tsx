@@ -87,46 +87,45 @@ export default function ResumeScreeningPage() {
   };
 
   const scoreColor = (s: number) =>
-    s >= 80 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' :
-    s >= 50 ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' :
-    'text-rose-400 border-rose-500/30 bg-rose-500/10';
+    s >= 80 ? 'text-emerald-400' :
+    s >= 50 ? 'text-amber-400' :
+    'text-rose-400';
 
   return (
     <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 100px)', minHeight: 0 }}>
       {/* Left List */}
-      <div style={{ width: '360px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <h1 className="text-xl font-bold text-white">Resume Screening AI</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Demographics-blind parsing & matching</p>
+          <h1 style={{ fontSize: '18px', fontWeight: 800 }}>Resume Screening AI</h1>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: 2 }}>Demographics-blind parsing & matching</p>
         </div>
-        {successMsg && <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-400">{successMsg}</div>}
-        {errorMsg && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">{errorMsg}</div>}
+        {successMsg && <div className="alert alert-success">{successMsg}</div>}
+        {errorMsg && <div className="alert alert-error">{errorMsg}</div>}
         
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
           {loading ? (
-            <div className="flex h-40 items-center justify-center">
-              <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            <div style={{ display: 'flex', height: 120, alignItems: 'center', justifyContent: 'center' }}>
+              <div className="spinner" style={{ width: 24, height: 24 }} />
             </div>
           ) : applications.length === 0 ? (
-            <div className="flex h-40 items-center justify-center text-xs text-slate-500">No applications to screen.</div>
+            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>No applications to screen.</p>
           ) : (
             applications.map(app => (
               <div key={app.id} onClick={() => setSelectedApp(app)}
-                className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
-                  selectedApp?.id === app.id
-                    ? 'border-violet-500/50 bg-violet-500/5 shadow-lg shadow-violet-500/10'
-                    : 'border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/70'
-                }`}
+                className="card"
+                style={{
+                  padding: '12px', cursor: 'pointer',
+                  borderColor: selectedApp?.id === app.id ? 'var(--color-primary-500)' : 'var(--border-subtle)',
+                  background: selectedApp?.id === app.id ? 'rgba(99,102,241,0.06)' : 'var(--surface-2)',
+                  transition: 'all 0.15s ease'
+                }}
               >
-                <div className="flex items-center gap-3">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p className="truncate text-sm font-semibold text-white">{app.candidate_name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{app.job_title}</p>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{app.candidate_name}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{app.job_title}</p>
                   </div>
-                  <div className={`flex-shrink-0 rounded-lg border px-2 py-1 text-center ${scoreColor(app.fit_score)}`}>
-                    <p className="text-xs font-black">{Math.round(app.fit_score)}%</p>
-                    <p className="text-[9px] font-medium uppercase">ATS</p>
-                  </div>
+                  <span style={{ fontSize: '12px', fontWeight: 700, paddingLeft: 8 }} className={scoreColor(app.fit_score)}>{Math.round(app.fit_score)}%</span>
                 </div>
               </div>
             ))
@@ -137,53 +136,51 @@ export default function ResumeScreeningPage() {
       {/* Right Details */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {!selectedApp ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-slate-900/20 text-center p-12">
-            <div className="text-6xl">📄</div>
-            <h2 className="text-lg font-semibold text-white">Select a Candidate</h2>
-            <p className="text-sm text-slate-400 max-w-xs">View demographics-blind parsing metadata, AI feedback matching, and screen applications.</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4 }}>Select a Candidate</h2>
+            <p style={{ fontSize: '12.5px' }}>View demographics-blind parsing metadata, AI feedback matching, and screen applications.</p>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '20px' }}>
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
               <div>
-                <h2 className="text-xl font-bold text-white">{selectedApp.candidate_name}</h2>
-                <p className="text-xs text-slate-400">{selectedApp.candidate_email} · {selectedApp.job_title}</p>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{selectedApp.candidate_name}</h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: 2 }}>{selectedApp.candidate_email} · {selectedApp.job_title}</p>
               </div>
-              <div className={`rounded-xl border px-4 py-2 ${scoreColor(selectedApp.fit_score)}`}>
-                <p className="text-xl font-black">{Math.round(selectedApp.fit_score)}%</p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">ATS Match</p>
+              <div className="card" style={{ padding: '8px 16px', background: 'var(--surface-3)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: 800 }} className={scoreColor(selectedApp.fit_score)}>{Math.round(selectedApp.fit_score)}%</span>
+                <span style={{ fontSize: '9px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>ATS Match</span>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto' }} className="space-y-5 pr-2">
-              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                <h3 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">🤖 AI Screening Recommendation</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">{selectedApp.screening_feedback || 'No screening notes generated.'}</p>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="card" style={{ background: 'rgba(124, 58, 237, 0.05)', borderColor: 'rgba(124, 58, 237, 0.2)', padding: 16 }}>
+                <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>🤖 AI Screening Recommendation</h3>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedApp.screening_feedback || 'No screening notes generated.'}</p>
               </div>
 
               {selectedApp.raw_parsed_data && (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-400 uppercase mb-2">Technical Skills</h4>
-                    <div className="flex flex-wrap gap-1.5">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Technical Skills</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {selectedApp.raw_parsed_data.skills?.map(skill => (
-                        <span key={skill} className="rounded bg-slate-800 border border-white/5 px-2.5 py-1 text-xs text-slate-300">{skill}</span>
-                      )) || <span className="text-xs text-slate-500">None extracted</span>}
+                        <span key={skill} className="badge badge-default" style={{ fontSize: '11px' }}>{skill}</span>
+                      )) || <span style={{ fontSize: '12px', color: 'var(--text-disabled)' }}>None extracted</span>}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-400 uppercase mb-2">Work Experience</h4>
-                      <p className="text-sm font-medium text-white">{selectedApp.raw_parsed_data.experience_years ?? 0} Years</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Work Experience</h4>
+                      <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{selectedApp.raw_parsed_data.experience_years ?? 0} Years</p>
                     </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-400 uppercase mb-2">Education</h4>
-                      <div className="space-y-1">
-                        {selectedApp.raw_parsed_data.education?.map((edu, idx) => (
-                          <p key={idx} className="text-xs text-slate-300">{edu.degree} - {edu.school} ({edu.year})</p>
-                        )) || <p className="text-xs text-slate-500">None extracted</p>}
-                      </div>
+                    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Education</h4>
+                      {selectedApp.raw_parsed_data.education?.map((edu, idx) => (
+                        <p key={idx} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{edu.degree} - {edu.school} ({edu.year})</p>
+                      )) || <span style={{ fontSize: '12px', color: 'var(--text-disabled)' }}>None extracted</span>}
                     </div>
                   </div>
                 </div>
@@ -191,27 +188,20 @@ export default function ResumeScreeningPage() {
             </div>
 
             {/* Actions */}
-            <div className="border-t border-white/5 pt-4 flex gap-3">
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', display: 'flex', gap: '12px' }}>
               <button onClick={() => handleDecision(selectedApp.id, 'MCQ_STAGE')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white hover:bg-emerald-500 transition disabled:opacity-50">
+                className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
                 Shortlist (Move to MCQ)
               </button>
               <button onClick={() => handleDecision(selectedApp.id, 'REVIEW_REQUIRED')} disabled={actionLoading}
-                className="rounded-xl border border-white/10 px-6 py-3 text-xs font-bold text-slate-300 hover:bg-slate-800 transition disabled:opacity-50">
+                className="btn btn-secondary">
                 Mark for Review
               </button>
               <button onClick={() => handleDecision(selectedApp.id, 'REJECTED')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-rose-600/20 border border-rose-500/30 py-3 text-xs font-bold text-rose-400 hover:bg-rose-600/30 transition disabled:opacity-50">
+                className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }}>
                 Reject & Recommend Upskilling
               </button>
             </div>
-            
-            {/* Upskill note */}
-            {selectedApp.status === 'REJECTED' && (
-              <div className="rounded-xl border border-rose-500/10 bg-rose-500/5 p-3 text-xs text-rose-300">
-                💡 Candidate rejected. A personalized email was dispatched suggesting upskilling courses in their VidyamargAI student account.
-              </div>
-            )}
           </div>
         )}
       </div>

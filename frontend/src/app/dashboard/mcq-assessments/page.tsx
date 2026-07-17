@@ -96,49 +96,55 @@ export default function MCQAssessmentsPage() {
   };
 
   const integrityColor = (risk: string) =>
-    risk === 'HIGH' ? 'text-rose-400 border-rose-500/30 bg-rose-500/10' :
-    risk === 'MEDIUM' ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' :
-    'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+    risk === 'HIGH' ? 'text-rose-400' :
+    risk === 'MEDIUM' ? 'text-amber-400' :
+    'text-emerald-400';
+
+  const scoreColor = (score: number | null, max: number) => {
+    if (score === null) return 'text-slate-400';
+    const pct = (score / max) * 100;
+    if (pct >= 85) return 'text-emerald-400';
+    if (pct >= 50) return 'text-amber-400';
+    return 'text-rose-400';
+  };
 
   return (
     <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 100px)', minHeight: 0 }}>
-      {/* Left panel: list of attempts */}
-      <div style={{ width: '360px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Left Attempts List */}
+      <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <h1 className="text-xl font-bold text-white">MCQ & Aptitude Assessments</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Automated screening & integrity auditing</p>
+          <h1 style={{ fontSize: '18px', fontWeight: 800 }}>MCQ Assessment Console</h1>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: 2 }}>Integrity proctoring & score review</p>
         </div>
-        {successMsg && <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-400">{successMsg}</div>}
-        {errorMsg && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">{errorMsg}</div>}
+        {successMsg && <div className="alert alert-success">{successMsg}</div>}
+        {errorMsg && <div className="alert alert-error">{errorMsg}</div>}
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
           {loading ? (
-            <div className="flex h-40 items-center justify-center">
-              <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            <div style={{ display: 'flex', height: 120, alignItems: 'center', justifyContent: 'center' }}>
+              <div className="spinner" style={{ width: 24, height: 24 }} />
             </div>
           ) : attempts.length === 0 ? (
-            <div className="flex h-40 items-center justify-center text-xs text-slate-500">No attempts registered yet.</div>
+            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>No assessment attempts recorded.</p>
           ) : (
             attempts.map(att => (
               <div key={att.id} onClick={() => setSelectedAttempt(att)}
-                className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
-                  selectedAttempt?.id === att.id
-                    ? 'border-violet-500/50 bg-violet-500/5 shadow-lg shadow-violet-500/10'
-                    : 'border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/70'
-                }`}
+                className="card"
+                style={{
+                  padding: '12px', cursor: 'pointer',
+                  borderColor: selectedAttempt?.id === att.id ? 'var(--color-primary-500)' : 'var(--border-subtle)',
+                  background: selectedAttempt?.id === att.id ? 'rgba(99,102,241,0.06)' : 'var(--surface-2)',
+                  transition: 'all 0.15s ease'
+                }}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{att.candidate_name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{att.job_title}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.candidate_name}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{att.job_title}</p>
                   </div>
-                  <span className={`rounded border px-2 py-0.5 text-[9px] font-black tracking-wide ${integrityColor(att.integrity_risk)}`}>
-                    🛡️ {att.integrity_risk}
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, paddingLeft: 8 }} className={scoreColor(att.score, att.max_score)}>
+                    {att.score !== null ? `${att.score}/${att.max_score}` : 'Pending'}
                   </span>
-                </div>
-                <div className="mt-2 flex justify-between items-center text-xs">
-                  <span className="text-slate-400">Score: {att.score !== null ? `${att.score}/${att.max_score}` : 'Pending'}</span>
-                  <span className="text-slate-500">{att.status}</span>
                 </div>
               </div>
             ))
@@ -146,68 +152,61 @@ export default function MCQAssessmentsPage() {
         </div>
       </div>
 
-      {/* Right panel: Details */}
+      {/* Right Details Panel */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {!selectedAttempt ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-slate-900/20 text-center p-12">
-            <div className="text-6xl">📝</div>
-            <h2 className="text-lg font-semibold text-white">Select an Assessment Attempt</h2>
-            <p className="text-sm text-slate-400 max-w-xs">Audit candidate MCQ answers, check anti-cheat logs, integrity risk levels and assign decision status.</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4 }}>Select an Attempt</h2>
+            <p style={{ fontSize: '12.5px' }}>Verify candidate score marks, evaluate proctor integrity logs, and route candidates.</p>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '20px' }}>
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
               <div>
-                <h2 className="text-xl font-bold text-white">{selectedAttempt.candidate_name}</h2>
-                <p className="text-xs text-slate-400">{selectedAttempt.candidate_email} · {selectedAttempt.job_title}</p>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{selectedAttempt.candidate_name}</h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: 2 }}>{selectedAttempt.candidate_email} · {selectedAttempt.job_title}</p>
               </div>
-              <div className="flex gap-4">
-                <div className="text-center rounded-lg border border-white/5 bg-slate-900/30 px-3 py-1.5">
-                  <p className="text-lg font-black text-violet-400">
-                    {selectedAttempt.score !== null ? `${Math.round((selectedAttempt.score / selectedAttempt.max_score) * 100)}%` : 'N/A'}
-                  </p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase">Aptitude Score</p>
-                </div>
-                <div className={`text-center rounded-lg border px-3 py-1.5 ${integrityColor(selectedAttempt.integrity_risk)}`}>
-                  <p className="text-sm font-black uppercase">{selectedAttempt.integrity_risk}</p>
-                  <p className="text-[9px] font-bold uppercase tracking-wider">Integrity Risk</p>
-                </div>
+              <div className="card" style={{ padding: '8px 16px', background: 'var(--surface-3)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: 800 }} className={scoreColor(selectedAttempt.score, selectedAttempt.max_score)}>
+                  {selectedAttempt.score !== null ? `${Math.round((selectedAttempt.score / selectedAttempt.max_score) * 100)}%` : 'TBD'}
+                </span>
+                <span style={{ fontSize: '9px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>Exam Grade</span>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto' }} className="space-y-4 pr-2">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">🔒 Anti-Cheating & Proctoring Logs</h3>
-              <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-2 max-h-48 overflow-y-auto">
-                {selectedAttempt.proctoring_logs && selectedAttempt.proctoring_logs.length > 0 ? (
-                  selectedAttempt.proctoring_logs.map((log, idx) => (
-                    <div key={idx} className="flex justify-between text-xs font-mono">
-                      <span className="text-rose-400">⚠️ {log.event_type}</span>
-                      <span className="text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Proctor status block */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Proctor Integrity Scan</h4>
+                  <span style={{ fontSize: '12px', fontWeight: 700 }} className={integrityColor(selectedAttempt.integrity_risk)}>{selectedAttempt.integrity_risk} RISK</span>
+                </div>
+                <div style={{ background: 'var(--surface-3)', borderRadius: 'var(--radius-md)', padding: '12px', fontSize: '12.5px', fontFamily: 'var(--font-mono)', border: '1px solid var(--border-subtle)' }}>
+                  {selectedAttempt.proctoring_logs && selectedAttempt.proctoring_logs.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {selectedAttempt.proctoring_logs.map((log, idx) => (
+                        <p key={idx} style={{ color: 'var(--text-secondary)' }}>
+                          ⚠️ [{new Date(log.timestamp).toLocaleTimeString()}] Event: {log.event_type}
+                        </p>
+                      ))}
                     </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-slate-400">🛡️ No integrity threats detected during test proctoring.</p>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                <h4 className="text-xs font-bold text-violet-400 uppercase mb-1">🤖 AI Test Proctor Assessment</h4>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {selectedAttempt.integrity_risk === 'HIGH' 
-                    ? 'Proctoring logs alert multiple screen swaps or tab switches. Candidate flag is set to manual review.' 
-                    : 'Candidate remained focused on the window with zero background activity. Integrity validated.'}
-                </p>
+                  ) : (
+                    <p style={{ color: 'var(--color-accent-400)' }}>✔ No anomalous copy-paste or tab loss telemetry detected.</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="border-t border-white/5 pt-4 flex gap-3">
+            {/* Actions */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', display: 'flex', gap: '12px' }}>
               <button onClick={() => handleDecision(selectedAttempt.application_id, 'CODING_STAGE')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white hover:bg-emerald-500 transition disabled:opacity-50">
-                Pass (Move to Coding)
+                className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                Pass Assessment (Move to Coding)
               </button>
               <button onClick={() => handleDecision(selectedAttempt.application_id, 'REJECTED')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-rose-600/20 border border-rose-500/30 py-3 text-xs font-bold text-rose-400 hover:bg-rose-600/30 transition disabled:opacity-50">
-                Fail & Close
+                className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }}>
+                Reject Candidate
               </button>
             </div>
           </div>

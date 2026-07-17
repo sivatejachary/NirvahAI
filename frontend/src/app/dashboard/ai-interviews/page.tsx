@@ -38,7 +38,6 @@ export default function AIInterviewsPage() {
     setErrorMsg('');
     const headers = getHeaders();
     try {
-      // Mock submissions since the endpoint returns actual candidate submissions
       const [appRes, jobsRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications`, { headers }),
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, { headers })
@@ -109,45 +108,48 @@ export default function AIInterviewsPage() {
     }
   };
 
+  const getScoreColor = (score?: number) => {
+    if (!score) return 'text-slate-400';
+    if (score >= 80) return 'text-emerald-400';
+    if (score >= 50) return 'text-amber-400';
+    return 'text-rose-400';
+  };
+
   return (
     <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 100px)', minHeight: 0 }}>
-      {/* Left panel: List */}
-      <div style={{ width: '360px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Left List */}
+      <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <h1 className="text-xl font-bold text-white">AI Technical Interviews</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Autonomous speech & core competency evaluation</p>
+          <h1 style={{ fontSize: '18px', fontWeight: 800 }}>AI Technical Interview</h1>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: 2 }}>Speech audio analysis & transcripts</p>
         </div>
-        {successMsg && <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-400">{successMsg}</div>}
-        {errorMsg && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">{errorMsg}</div>}
+        {successMsg && <div className="alert alert-success">{successMsg}</div>}
+        {errorMsg && <div className="alert alert-error">{errorMsg}</div>}
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
           {loading ? (
-            <div className="flex h-40 items-center justify-center">
-              <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            <div style={{ display: 'flex', height: 120, alignItems: 'center', justifyContent: 'center' }}>
+              <div className="spinner" style={{ width: 24, height: 24 }} />
             </div>
           ) : interviews.length === 0 ? (
-            <div className="flex h-40 items-center justify-center text-xs text-slate-500">No interviews logged.</div>
+            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>No AI interviews recorded.</p>
           ) : (
             interviews.map(int => (
               <div key={int.id} onClick={() => setSelectedInt(int)}
-                className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
-                  selectedInt?.id === int.id
-                    ? 'border-violet-500/50 bg-violet-500/5 shadow-lg shadow-violet-500/10'
-                    : 'border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/70'
-                }`}
+                className="card"
+                style={{
+                  padding: '12px', cursor: 'pointer',
+                  borderColor: selectedInt?.id === int.id ? 'var(--color-primary-500)' : 'var(--border-subtle)',
+                  background: selectedInt?.id === int.id ? 'rgba(99,102,241,0.06)' : 'var(--surface-2)',
+                  transition: 'all 0.15s ease'
+                }}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{int.candidate_name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{int.job_title}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{int.candidate_name}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{int.job_title}</p>
                   </div>
-                  <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold text-slate-400 uppercase">{int.status}</span>
-                </div>
-                <div className="mt-2 flex justify-between items-center text-xs">
-                  <span className="text-slate-400">Tech Score: {int.metadata?.technical_score ?? 'Pending'}%</span>
-                  <span className={`font-bold ${int.metadata?.recommendation === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    AI Rec: {int.metadata?.recommendation || 'N/A'}
-                  </span>
+                  <span className={`badge ${int.status === 'COMPLETED' ? 'badge-success' : 'badge-primary'}`} style={{ fontSize: '9px' }}>{int.status}</span>
                 </div>
               </div>
             ))
@@ -155,67 +157,74 @@ export default function AIInterviewsPage() {
         </div>
       </div>
 
-      {/* Right panel: Details */}
+      {/* Right Details Panel */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {!selectedInt ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-slate-900/20 text-center p-12">
-            <div className="text-6xl">🎙</div>
-            <h2 className="text-lg font-semibold text-white">Select an AI Interview</h2>
-            <p className="text-sm text-slate-400 max-w-xs">Audit voice transcript conversations, verify technical, communication, and confidence scores.</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🤖</div>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4 }}>Select an Interview</h2>
+            <p style={{ fontSize: '12.5px' }}>Verify audio transcription records, evaluate confidence/expression ratings, and route candidates.</p>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '20px' }}>
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
               <div>
-                <h2 className="text-xl font-bold text-white">{selectedInt.candidate_name}</h2>
-                <p className="text-xs text-slate-400">{selectedInt.candidate_email} · {selectedInt.job_title}</p>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{selectedInt.candidate_name}</h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: 2 }}>{selectedInt.candidate_email} · {selectedInt.job_title}</p>
               </div>
-              <div className="flex gap-4">
-                <div className="text-center rounded-lg border border-white/5 bg-slate-900/30 px-3 py-1.5">
-                  <p className="text-sm font-black text-violet-400">{selectedInt.metadata?.technical_score ?? 'N/A'}%</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase">Technical</p>
+              <div className="card" style={{ padding: '8px 16px', background: 'var(--surface-3)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: 800 }} className={getScoreColor(selectedInt.metadata.technical_score)}>{selectedInt.metadata.technical_score ?? 'TBD'}</span>
+                <span style={{ fontSize: '9px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>Technical Rating</span>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Score breakdown metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Communication Score</span>
+                  <p style={{ fontSize: '16px', fontWeight: 700 }} className={getScoreColor(selectedInt.metadata.communication_score)}>{selectedInt.metadata.communication_score}%</p>
                 </div>
-                <div className="text-center rounded-lg border border-white/5 bg-slate-900/30 px-3 py-1.5">
-                  <p className="text-sm font-black text-emerald-400">{selectedInt.metadata?.communication_score ?? 'N/A'}%</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase">Comm</p>
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Confidence Score</span>
+                  <p style={{ fontSize: '16px', fontWeight: 700 }} className={getScoreColor(selectedInt.metadata.confidence_score)}>{selectedInt.metadata.confidence_score}%</p>
                 </div>
-                <div className="text-center rounded-lg border border-white/5 bg-slate-900/30 px-3 py-1.5">
-                  <p className="text-sm font-black text-amber-400">{selectedInt.metadata?.confidence_score ?? 'N/A'}%</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase">Confidence</p>
+              </div>
+
+              {/* AI evaluation Summary */}
+              <div className="card" style={{ background: 'rgba(124, 58, 237, 0.05)', borderColor: 'rgba(124, 58, 237, 0.2)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase', marginBottom: '6px' }}>🤖 AI Autopilot voice summary</h4>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedInt.metadata.ai_summary}</p>
+              </div>
+
+              {/* Speech Transcript Console */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: '8px' }}>Speech Transcript Records</h4>
+                <div className="card" style={{ background: 'var(--surface-3)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 12, display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto' }}>
+                  {Array.isArray(selectedInt.transcript) ? (
+                    selectedInt.transcript.map((msg, idx) => (
+                      <div key={idx} style={{ fontSize: '12px' }}>
+                        <span style={{ fontWeight: 700, color: msg.role === 'assistant' ? 'var(--color-primary-400)' : 'var(--color-accent-400)' }}>
+                          {msg.role === 'assistant' ? 'Voice Coordinator Agent' : 'Candidate'}:
+                        </span>
+                        <p style={{ color: 'var(--text-secondary)', marginTop: 2, display: 'inline', marginLeft: 6 }}>{msg.content}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>{selectedInt.transcript}</p>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto' }} className="space-y-4 pr-2">
-              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                <h3 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">🤖 AI Voice Interview Summary</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">{selectedInt.metadata?.ai_summary || 'No summary generated.'}</p>
-              </div>
-
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Voice Interview Transcript</h3>
-              <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-3 font-mono text-xs">
-                {Array.isArray(selectedInt.transcript) ? (
-                  selectedInt.transcript.map((msg, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <span className={msg.role === 'assistant' ? 'text-violet-400 font-bold' : 'text-emerald-400 font-bold'}>
-                        {msg.role === 'assistant' ? '🤖 Interviwer AI' : '👤 Candidate'}:
-                      </span>
-                      <p className="text-slate-300 pl-4">{msg.content}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-slate-400 whitespace-pre-line">{selectedInt.transcript || 'No transcript generated.'}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="border-t border-white/5 pt-4 flex gap-3">
+            {/* Actions */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', display: 'flex', gap: '12px' }}>
               <button onClick={() => handleDecision(selectedInt.application_id, 'INTERVIEW_STAGE')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white hover:bg-emerald-500 transition disabled:opacity-50">
-                Pass (Move to Human Interviews)
+                className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                Pass Interview (Move to Human round)
               </button>
               <button onClick={() => handleDecision(selectedInt.application_id, 'REJECTED')} disabled={actionLoading}
-                className="flex-1 rounded-xl bg-rose-600/20 border border-rose-500/30 py-3 text-xs font-bold text-rose-400 hover:bg-rose-600/30 transition disabled:opacity-50">
+                className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }}>
                 Reject Candidate
               </button>
             </div>
