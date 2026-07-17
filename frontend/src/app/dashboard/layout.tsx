@@ -4,113 +4,70 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-/* ─────────────────────────────────────────────────────────────────
-   NAV STRUCTURE
-───────────────────────────────────────────────────────────────── */
-const NAV_SECTIONS = [
+interface SidebarItem {
+  href: string;
+  label: string;
+  emoji?: string;
+  exact?: boolean;
+  children?: Array<{ href: string; label: string; query?: string }>;
+}
+
+const SIDEBAR_STRUCTURE: SidebarItem[] = [
+  { href: '/dashboard', label: 'Dashboard', emoji: '🏠', exact: true },
   {
-    section: null, // Dashboard (no section header)
-    items: [
-      { href: '/dashboard', label: 'Dashboard', emoji: '🏠', exact: true },
-    ],
+    href: '/dashboard/jobs',
+    label: 'Jobs',
+    emoji: '💼',
+    children: [
+      { href: '/dashboard/jobs', label: 'Create Job' },
+      { href: '/dashboard/jobs', label: 'Job Listings' },
+      { href: '/dashboard/jobs', label: 'Draft Jobs' },
+      { href: '/dashboard/jobs', label: 'Published Jobs' },
+      { href: '/dashboard/jobs', label: 'Closed Jobs' },
+    ]
   },
   {
-    section: 'RECRUITMENT',
-    items: [
-      { href: '/dashboard/hiring-requests',         label: 'Hiring Requests',           emoji: '📋' },
-      { href: '/dashboard/jobs',                    label: 'Jobs',                      emoji: '💼' },
-      { href: '/dashboard/job-publishing',          label: 'Job Publishing',            emoji: '🌍' },
-      { href: '/dashboard/candidates',              label: 'Candidates',                emoji: '👥' },
-      { href: '/dashboard/applications',            label: 'Applications',              emoji: '📥' },
-      { href: '/dashboard/resume-screening',        label: 'Resume Screening',          emoji: '📄' },
-      { href: '/dashboard/recruiter-screening',     label: 'Recruiter Screening',       emoji: '📞' },
-      { href: '/dashboard/mcq-assessments',         label: 'MCQ Assessments',           emoji: '📝' },
-      { href: '/dashboard/coding-assessments',      label: 'Coding Assessments',        emoji: '💻' },
-      { href: '/dashboard/ai-interviews',           label: 'AI Technical Interviews',   emoji: '🎙' },
-      { href: '/dashboard/hackathons',              label: 'Hackathons / Assignments',  emoji: '🏆' },
-      { href: '/dashboard/interview-coordination',  label: 'Interview Coordination',    emoji: '📅' },
-      { href: '/dashboard/interviews',              label: 'Technical Interviews',      emoji: '👨‍💻' },
-      { href: '/dashboard/hiring-manager-reviews',  label: 'Hiring Manager Reviews',    emoji: '👨‍💼' },
-      { href: '/dashboard/hr-chat',                 label: 'HR Discussions',            emoji: '💬' },
-    ],
+    href: '/dashboard/candidates',
+    label: 'Candidates',
+    emoji: '👥',
+    children: [
+      { href: '/dashboard/candidates', label: 'All Candidates' },
+      { href: '/dashboard/applications', label: 'Applications' },
+      { href: '/dashboard/pipeline', label: 'Shortlisted' },
+      { href: '/dashboard/resume-screening', label: 'Resume Review' },
+      { href: '/dashboard/recruiter-screening', label: 'AI Screening Calls' },
+      { href: '/dashboard/mcq-assessments', label: 'Assessments' },
+      { href: '/dashboard/ai-interviews', label: 'AI Interviews' },
+      { href: '/dashboard/interviews', label: 'Technical Interviews' },
+      { href: '/dashboard/hiring-manager-reviews', label: 'Hiring Manager Interviews' },
+      { href: '/dashboard/hr-chat', label: 'HR Discussion' },
+      { href: '/dashboard/offers', label: 'Offers' },
+      { href: '/dashboard/bgv', label: 'Background Verification' },
+      { href: '/dashboard/joining', label: 'Joined' },
+      { href: '/dashboard/hiring-decisions', label: 'Rejected' },
+    ]
   },
   {
-    section: 'HIRING',
-    items: [
-      { href: '/dashboard/hiring-decisions',        label: 'Hiring Decisions',          emoji: '✅' },
-      { href: '/dashboard/offers',                  label: 'Offer Management',          emoji: '💰' },
-      { href: '/dashboard/bgv',                     label: 'Background Verification',   emoji: '📑' },
-      { href: '/dashboard/document-verification',   label: 'Document Verification',     emoji: '📂' },
-      { href: '/dashboard/pre-boarding',            label: 'Pre-Boarding',              emoji: '🎉' },
-      { href: '/dashboard/joining',                 label: 'Joining',                   emoji: '🚀' },
-      { href: '/dashboard/onboarding',              label: 'Onboarding',                emoji: '🏢' },
-    ],
+    href: '/dashboard/settings/workflow',
+    label: 'Hiring Workflow',
+    emoji: '⚙️',
+    children: [
+      { href: '/dashboard/settings/workflow', label: 'Workflow Templates' },
+      { href: '/dashboard/settings/workflow', label: 'Recruitment Stages' },
+      { href: '/dashboard/settings/workflow', label: 'Assessment Configuration' },
+      { href: '/dashboard/settings/workflow', label: 'Interview Configuration' },
+      { href: '/dashboard/settings/workflow', label: 'AI Resume Rules' },
+      { href: '/dashboard/settings/workflow', label: 'AI Screening Rules' },
+      { href: '/dashboard/settings/workflow', label: 'Auto Shortlisting Rules' },
+      { href: '/dashboard/settings/workflow', label: 'Notification Templates' },
+      { href: '/dashboard/settings/workflow', label: 'Approval Workflow' },
+    ]
   },
-  {
-    section: 'OPERATIONS',
-    items: [
-      { href: '/dashboard/meetings',                label: 'Interview Calendar',         emoji: '📅' },
-      { href: '/dashboard/calls',                   label: 'Call Center',               emoji: '📞' },
-      { href: '/dashboard/email-center',            label: 'Email Center',              emoji: '📨' },
-      { href: '/dashboard/whatsapp',                label: 'WhatsApp Center',           emoji: '💬' },
-      { href: '/dashboard/notifications',           label: 'Notifications',             emoji: '📢' },
-      { href: '/dashboard/documents',               label: 'Documents',                 emoji: '📄' },
-    ],
-  },
-  {
-    section: 'AI CENTER',
-    items: [
-      { href: '/dashboard/ai/recruiter',            label: 'AI Recruiter',              emoji: '🤖' },
-      { href: '/dashboard/ai/resume',               label: 'Resume AI',                 emoji: '📄' },
-      { href: '/dashboard/ai/matching',             label: 'Matching AI',               emoji: '🎯' },
-      { href: '/dashboard/ai/assessment',           label: 'Assessment AI',             emoji: '📝' },
-      { href: '/dashboard/ai/coding',               label: 'Coding AI',                 emoji: '💻' },
-      { href: '/dashboard/ai/interview',            label: 'Interview AI',              emoji: '🎙' },
-      { href: '/dashboard/ai/coordinator',          label: 'Interview Coordinator AI',  emoji: '📅' },
-      { href: '/dashboard/ai/hr',                   label: 'HR AI',                     emoji: '👔' },
-      { href: '/dashboard/ai/offer',                label: 'Offer AI',                  emoji: '💰' },
-      { href: '/dashboard/ai/bgv',                  label: 'BGV AI',                    emoji: '📑' },
-      { href: '/dashboard/ai/onboarding',           label: 'Onboarding AI',             emoji: '🎓' },
-      { href: '/dashboard/ai/analytics',            label: 'AI Analytics',              emoji: '📊' },
-    ],
-  },
-  {
-    section: 'ANALYTICS',
-    items: [
-      { href: '/dashboard/analytics',               label: 'Recruitment Dashboard',     emoji: '📊' },
-      { href: '/dashboard/analytics/hiring',        label: 'Hiring Analytics',          emoji: '📈' },
-      { href: '/dashboard/analytics/funnel',        label: 'Recruitment Funnel',        emoji: '📉' },
-      { href: '/dashboard/analytics/sources',       label: 'Source Analytics',          emoji: '🎯' },
-      { href: '/dashboard/analytics/recruiters',    label: 'Recruiter Performance',     emoji: '👥' },
-      { href: '/dashboard/analytics/time-to-hire',  label: 'Time to Hire',              emoji: '⏱' },
-      { href: '/dashboard/analytics/cost',          label: 'Hiring Cost',               emoji: '💰' },
-    ],
-  },
-  {
-    section: 'SETTINGS',
-    items: [
-      { href: '/dashboard/settings/company',        label: 'Company',                   emoji: '🏢' },
-      { href: '/dashboard/settings/workflow',       label: 'Workflow Builder',          emoji: '⚙' },
-      { href: '/dashboard/settings/job-templates',  label: 'Job Templates',             emoji: '📄' },
-      { href: '/dashboard/settings/assessment-templates', label: 'Assessment Templates', emoji: '📝' },
-      { href: '/dashboard/settings/interview-templates',  label: 'Interview Templates',  emoji: '🎙' },
-      { href: '/dashboard/settings/users',          label: 'Users & Roles',             emoji: '👥' },
-      { href: '/dashboard/settings/permissions',    label: 'Permissions',               emoji: '🔐' },
-      { href: '/dashboard/settings/integrations',   label: 'Integrations',              emoji: '🔗' },
-      { href: '/dashboard/settings/email',          label: 'Email',                     emoji: '📨' },
-      { href: '/dashboard/settings/telephony',      label: 'Telephony',                 emoji: '📞' },
-      { href: '/dashboard/settings/whatsapp',       label: 'WhatsApp',                  emoji: '💬' },
-      { href: '/dashboard/settings/calendar',       label: 'Calendar',                  emoji: '📅' },
-      { href: '/dashboard/settings/ai',             label: 'AI Configuration',          emoji: '🤖' },
-      { href: '/dashboard/settings/audit-logs',     label: 'Audit Logs',                emoji: '📝' },
-    ],
-  },
+  { href: '/dashboard/calls', label: 'HR Voice', emoji: '🎙️' },
+  { href: '/dashboard/analytics', label: 'Reports & Analytics', emoji: '📊' },
+  { href: '/dashboard/settings', label: 'Company Settings', emoji: '🏢' },
 ];
 
-/* ─────────────────────────────────────────────────────────────────
-   All unique hrefs that already have real pages — others show
-   a "coming soon" placeholder via the catch-all
-───────────────────────────────────────────────────────────────── */
 const LIVE_ROUTES = new Set([
   '/dashboard',
   '/dashboard/jobs',
@@ -131,6 +88,7 @@ const LIVE_ROUTES = new Set([
   '/dashboard/analytics',
   '/dashboard/sandbox',
   '/dashboard/settings',
+  '/dashboard/settings/workflow',
   '/dashboard/resume-screening',
   '/dashboard/recruiter-screening',
   '/dashboard/mcq-assessments',
@@ -144,16 +102,17 @@ const LIVE_ROUTES = new Set([
   '/dashboard/joining',
 ]);
 
-/* ─────────────────────────────────────────────────────────────────
-   LAYOUT
-───────────────────────────────────────────────────────────────── */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [companyName, setCompanyName] = useState('Loading...');
   const [userInitials, setUserInitials] = useState('U');
   const [userRole, setUserRole] = useState('');
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
+    'Jobs': true,
+    'Candidates': true,
+    'Hiring Workflow': false
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -186,15 +145,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/');
   };
 
-  const toggleSection = (section: string) => {
-    setCollapsed(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleFolder = (label: string) => {
+    setOpenFolders(prev => ({ ...prev, [label]: !prev[label] }));
   };
-
-  // Find current page label for header
-  const allItems = NAV_SECTIONS.flatMap(s => s.items);
-  const currentLabel = allItems.find(i => i.href === pathname)?.label
-    || allItems.find(i => pathname.startsWith(i.href) && i.href !== '/dashboard')?.label
-    || 'Dashboard';
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;
@@ -205,7 +158,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="app-layout">
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside className="app-sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
-
         {/* Logo / Company */}
         <div className="sidebar-logo">
           <div className="sidebar-logo-mark" style={{
@@ -222,40 +174,87 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Navigation */}
         <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-          {NAV_SECTIONS.map((group, gi) => (
-            <div key={gi}>
-              {/* Section Header */}
-              {group.section && (
-                <button
-                  onClick={() => toggleSection(group.section!)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '10px 14px 4px',
-                    color: 'var(--text-tertiary)',
-                    fontSize: 10, fontWeight: 700,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase' as const,
-                  }}
-                >
-                  <span>{group.section}</span>
-                  <span style={{ fontSize: 10, opacity: 0.5, transition: 'transform 0.2s', display: 'inline-block', transform: collapsed[group.section!] ? 'rotate(-90deg)' : 'rotate(0)' }}>▾</span>
-                </button>
-              )}
+          {SIDEBAR_STRUCTURE.map((item, idx) => {
+            const hasChildren = !!item.children;
+            const active = isActive(item.href, item.exact);
+            const folderOpen = openFolders[item.label];
 
-              {/* Items */}
-              {!collapsed[group.section!] && group.items.map(item => {
-                const active = isActive(item.href, 'exact' in item ? item.exact : false);
-                return (
+            return (
+              <div key={idx} className="space-y-0.5">
+                {hasChildren ? (
+                  <div>
+                    {/* Collapsible Folder Header */}
+                    <button
+                      onClick={() => toggleFolder(item.label)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '8px 14px',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: active ? '#fff' : 'var(--text-secondary)',
+                        textAlign: 'left',
+                        gap: 9,
+                        outline: 'none'
+                      }}
+                    >
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>{item.emoji}</span>
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      <span style={{ fontSize: 10, opacity: 0.5, transition: 'transform 0.2s', transform: folderOpen ? 'rotate(0)' : 'rotate(-90deg)' }}>▾</span>
+                    </button>
+
+                    {/* Collapsible Children */}
+                    {folderOpen && (
+                      <div className="pl-4 space-y-0.5 border-l border-white/5 ml-5 mt-0.5 mb-1.5">
+                        {item.children!.map((child, cIdx) => {
+                          const childActive = pathname === child.href;
+                          return (
+                            <Link
+                              key={cIdx}
+                              href={child.href}
+                              className={`sidebar-item${childActive ? ' active' : ''}`}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '5px 12px',
+                                borderRadius: 6,
+                                fontSize: 12.5,
+                                fontWeight: childActive ? 600 : 400,
+                                color: childActive ? '#fff' : 'var(--text-tertiary)',
+                                background: childActive ? 'rgba(99,102,241,0.15)' : 'transparent',
+                                border: '1px solid transparent',
+                                textDecoration: 'none',
+                              }}
+                            >
+                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{child.label}</span>
+                              {item.label === 'Hiring Workflow' && (
+                                <span style={{
+                                  fontSize: 8, fontWeight: 700, textTransform: 'uppercase',
+                                  letterSpacing: '0.05em', color: 'rgba(99,102,241,0.6)',
+                                  background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
+                                  borderRadius: 4, padding: '1px 3px', flexShrink: 0,
+                                }}>Soon</span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Single Item */
                   <Link
-                    key={item.href}
                     href={item.href}
                     className={`sidebar-item${active ? ' active' : ''}`}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 9,
-                      padding: '6px 14px',
+                      padding: '8px 14px',
                       margin: '1px 8px',
                       borderRadius: 8,
                       fontSize: 13,
@@ -267,24 +266,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       border: active ? '1px solid rgba(124,58,237,0.35)' : '1px solid transparent',
                       textDecoration: 'none',
                       transition: 'all 0.15s ease',
-                      letterSpacing: active ? '0.01em' : 'normal',
                     }}
                   >
                     <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>{item.emoji}</span>
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                    {!LIVE_ROUTES.has(item.href) && (
+                    {item.label === 'HR Voice' && (
                       <span style={{
-                        fontSize: 8, fontWeight: 700, textTransform: 'uppercase' as const,
+                        fontSize: 8, fontWeight: 700, textTransform: 'uppercase',
                         letterSpacing: '0.05em', color: 'rgba(99,102,241,0.6)',
                         background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
-                        borderRadius: 4, padding: '1px 4px', flexShrink: 0,
+                        borderRadius: 4, padding: '1px 3px', flexShrink: 0,
                       }}>Soon</span>
                     )}
                   </Link>
-                );
-              })}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* VidyamargAI Integration Banner */}
@@ -331,7 +329,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="app-main">
         <header className="app-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{currentLabel}</span>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{pathname === '/dashboard' ? 'Dashboard' : pathname.split('/').pop()?.replace(/-/g, ' ')}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-accent-500)', boxShadow: 'var(--shadow-glow-accent)' }} title="All systems operational" />
