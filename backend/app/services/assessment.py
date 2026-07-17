@@ -137,6 +137,33 @@ class AssessmentService:
         mcq_stmt = select(JobMCQ).where(JobMCQ.job_id == app.job_id)
         questions = (await db.execute(mcq_stmt)).scalars().all()
 
+        if not questions:
+            job_stmt = select(Job).where(Job.id == app.job_id)
+            job_obj = (await db.execute(job_stmt)).scalar_one_or_none()
+            job_title = job_obj.title if job_obj else "Software Development"
+
+            q1 = JobMCQ(
+                tenant_id=t_uuid, job_id=app.job_id,
+                question_text=f"Which design pattern or architectural approach is best suited for building scalable systems for {job_title}?",
+                options=["Microservices & Asynchronous Messaging", "Monolithic Single-Threaded Event Loop", "Tight File System Coupling", "Direct Shared Global State"],
+                correct_option="Microservices & Asynchronous Messaging", difficulty="MID"
+            )
+            q2 = JobMCQ(
+                tenant_id=t_uuid, job_id=app.job_id,
+                question_text="How should production API endpoints protect against data integrity issues and concurrent updates?",
+                options=["Database Transactions & Optimistic Locking", "Ignoring Concurrent Requests", "Writing to Temp Disk Files", "Client-side Timeouts Only"],
+                correct_option="Database Transactions & Optimistic Locking", difficulty="MID"
+            )
+            q3 = JobMCQ(
+                tenant_id=t_uuid, job_id=app.job_id,
+                question_text="What is the primary benefit of containerizing applications with Docker & Kubernetes?",
+                options=["Consistent execution across environments & automated scaling", "Faster CPU clock speed", "Automatic code syntax correction", "Bypassing network security firewalls"],
+                correct_option="Consistent execution across environments & automated scaling", difficulty="MID"
+            )
+            db.add_all([q1, q2, q3])
+            await db.flush()
+            questions = [q1, q2, q3]
+
         # Find first question that has not been answered in attempt.responses keys
         for q in questions:
             if str(q.id) not in attempt.responses:

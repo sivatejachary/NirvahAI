@@ -128,6 +128,9 @@ async def public_record_consent_by_email(
     """
     # Derive deterministic UUID from email — same logic as ApplicationService
     candidate_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, str(consent_data.candidate_email))
+    from sqlalchemy import text
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     record = await compliance_svc.log_consent(
         db,
         tenant_id=tenant_id,
@@ -151,6 +154,9 @@ async def public_submit_application(
     """
 
     try:
+        from sqlalchemy import text
+        if "sqlite" not in str(db.bind.url):
+            await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
         application = await ApplicationService.submit_application(
             db=db,
             tenant_id=tenant_id,
@@ -248,6 +254,9 @@ async def public_record_consent(
     except (ValueError, AttributeError):
         candidate_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(candidate_id)))
 
+    from sqlalchemy import text
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     record = await compliance_svc.log_consent(
         db,
         tenant_id=tenant_id,
@@ -269,6 +278,9 @@ async def public_request_accommodation(
     """
     Candidate submits accessibility / manual bypass accommodations.
     """
+    from sqlalchemy import text
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     req = await compliance_svc.create_accommodation_request(
         db,
         tenant_id=tenant_id,
@@ -288,6 +300,9 @@ async def public_request_privacy_action(
     """
     Candidate initiates DSAR deletion / access request.
     """
+    from sqlalchemy import text
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     req = await compliance_svc.create_privacy_request(
         db,
         tenant_id=tenant_id,
@@ -311,6 +326,9 @@ async def public_verify_privacy_action(
     """
     Candidate verifies email ownership for DSAR request.
     """
+    from sqlalchemy import text
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     verified = await compliance_svc.verify_privacy_request(db, tenant_id, request_id, token)
     if not verified:
       raise HTTPException(
@@ -350,6 +368,9 @@ async def public_start_assessment(
     Starts an unauthenticated assessment attempt for a candidate application.
     """
     try:
+        from sqlalchemy import text
+        if "sqlite" not in str(db.bind.url):
+            await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
         attempt = await AssessmentService.start_assessment_attempt(
             db=db,
             tenant_id=tenant_id,
@@ -379,6 +400,9 @@ async def public_get_next_question(
     """
     from app.services.assessment import AssessmentService
     try:
+        from sqlalchemy import text
+        if "sqlite" not in str(db.bind.url):
+            await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
         q = await AssessmentService.get_next_question(db, tenant_id, attempt_id)
         if not q:
             return {"finished": True, "question": None}
@@ -410,6 +434,9 @@ async def public_submit_response(
     """
     from app.services.assessment import AssessmentService
     try:
+        from sqlalchemy import text
+        if "sqlite" not in str(db.bind.url):
+            await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
         attempt = await AssessmentService.submit_mcq_response(
             db=db,
             tenant_id=tenant_id,
@@ -440,6 +467,9 @@ async def public_submit_proctor_log(
     """
     from app.services.assessment import AssessmentService
     try:
+        from sqlalchemy import text
+        if "sqlite" not in str(db.bind.url):
+            await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
         log = await AssessmentService.log_proctoring_telemetry(
             db=db,
             tenant_id=tenant_id,

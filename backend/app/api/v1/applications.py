@@ -79,3 +79,31 @@ async def get_application_details(
     if not app_val:
         raise HTTPException(status_code=404, detail="Application posting not found.")
     return app_val
+
+
+class ApplicationStatusUpdate(BaseModel):
+    status: str
+
+
+@router.patch("/{application_id}/status", dependencies=[Depends(require_role("tenant_admin", "hr_manager", "hr_recruiter"))])
+async def update_application_status(
+    db: DBSession,
+    tenant_id: TenantId,
+    application_id: str,
+    body: ApplicationStatusUpdate
+):
+    import uuid
+    t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    a_uuid = uuid.UUID(application_id) if isinstance(application_id, str) else application_id
+
+    stmt = select(Application).where(Application.tenant_id == t_uuid, Application.id == a_uuid)
+    res = await db.execute(stmt)
+    app_val = res.scalar_one_or_none()
+    if not app_val:
+        raise HTTPException(status_code=404, detail="Application not found.")
+
+    app_val.status = body.status
+    await db.commit()
+    await db.refresh(app_val)
+    return app_val
+
