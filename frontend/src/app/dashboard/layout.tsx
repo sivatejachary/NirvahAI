@@ -131,6 +131,17 @@ const LIVE_ROUTES = new Set([
   '/dashboard/analytics',
   '/dashboard/sandbox',
   '/dashboard/settings',
+  '/dashboard/resume-screening',
+  '/dashboard/recruiter-screening',
+  '/dashboard/mcq-assessments',
+  '/dashboard/coding-assessments',
+  '/dashboard/ai-interviews',
+  '/dashboard/interview-coordination',
+  '/dashboard/hiring-manager-reviews',
+  '/dashboard/hiring-decisions',
+  '/dashboard/applications',
+  '/dashboard/pre-boarding',
+  '/dashboard/joining',
 ]);
 
 /* ─────────────────────────────────────────────────────────────────
