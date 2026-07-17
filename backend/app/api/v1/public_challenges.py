@@ -73,6 +73,27 @@ async def public_get_attempt_challenges(
     )
     challenges = (await db.execute(chall_stmt)).scalars().all()
 
+    if not challenges:
+        c1 = CodingChallenge(
+            tenant_id=t_uuid,
+            job_id=app.job_id,
+            title="Algorithm: Two Sum Target",
+            description="Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nInput format:\n- Line 1: comma-separated integers (e.g. `2,7,11,15`)\n- Line 2: target integer (e.g. `9`)",
+            starter_code={
+                "python": "import sys\n\ndef solution(nums, target):\n    # Write your solution here\n    # Example return: [0, 1]\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n    return []\n\nif __name__ == \"__main__\":\n    lines = sys.stdin.read().splitlines()\n    if len(lines) >= 2:\n        nums = [int(x) for x in lines[0].split(',')]\n        target = int(lines[1])\n        print(solution(nums, target))",
+                "javascript": "const fs = require('fs');\n\nfunction solution(nums, target) {\n    // Write your solution here\n    // Example return: [0, 1]\n    for (let i = 0; i < nums.length; i++) {\n        for (let j = i + 1; j < nums.length; j++) {\n            if (nums[i] + nums[j] === target) {\n                return [i, j];\n            }\n        }\n    }\n    return [];\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim().split('\\n');\nif (input.length >= 2) {\n    const nums = input[0].split(',').map(Number);\n    const target = Number(input[1]);\n    console.log(JSON.stringify(solution(nums, target)));\n}"
+            },
+            test_cases=[
+                {"input": "2,7,11,15\n9", "output": "[0, 1]", "hidden": false},
+                {"input": "3,2,4\n6", "output": "[1, 2]", "hidden": false},
+                {"input": "3,3\n6", "output": "[0, 1]", "hidden": true}
+            ]
+        )
+        db.add(c1)
+        await db.flush()
+        challenges = [c1]
+
+
     return [
         {
             "id": str(c.id),
