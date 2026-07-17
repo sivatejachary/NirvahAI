@@ -77,8 +77,6 @@ export default function CandidatesDashboardPage() {
   const [pipeline, setPipeline] = useState<PipelineStage[]>([]);
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedJobId, setSelectedJobId] = useState('ALL');
-  const [fitFilter, setFitFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -86,9 +84,12 @@ export default function CandidatesDashboardPage() {
   const [editStage, setEditStage] = useState<number | null>(null);
   const [editFeedback, setEditFeedback] = useState('');
   const [editScore, setEditScore] = useState('');
+
+  // Active left sub-tab
+  const [activeSubTab, setActiveSubTab] = useState<'all' | 'applied' | 'shortlisted' | 'screening' | 'calls' | 'assessments' | 'ai_interviews' | 'technical' | 'manager' | 'hr' | 'offers' | 'bgv' | 'joined' | 'rejected'>('all');
   
-  // Detail views tab state
-  const [activeTab, setActiveTab] = useState<'profile' | 'timeline' | 'assessment' | 'interview' | 'documents' | 'communication'>('profile');
+  // Profile tabs state
+  const [profileTab, setProfileTab] = useState<'profile' | 'timeline' | 'assessment' | 'interview' | 'documents' | 'communication'>('profile');
 
   const getHeaders = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
@@ -115,7 +116,6 @@ export default function CandidatesDashboardPage() {
       if (jobsRes.ok) { jobsData = await jobsRes.json(); setJobs(jobsData); }
       
       const mappedApps = appsData.map(app => {
-        // Enforce enriched default fields if not populated in raw_parsed_data
         const parsed = app.raw_parsed_data || {};
         return {
           ...app,
@@ -206,16 +206,28 @@ export default function CandidatesDashboardPage() {
     finally { setActionLoading(null); }
   };
 
-  const filteredApps = applications.filter(app => {
-    const matchesSearch = app.candidate_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.candidate_email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesJob = selectedJobId === 'ALL' || app.job_id === selectedJobId;
-    let matchesFit = true;
-    if (fitFilter === 'HIGH') matchesFit = app.fit_score >= 80;
-    else if (fitFilter === 'MID') matchesFit = app.fit_score >= 50 && app.fit_score < 80;
-    else if (fitFilter === 'LOW') matchesFit = app.fit_score < 50;
-    return matchesSearch && matchesJob && matchesFit;
-  });
+  const getFilteredCandidates = () => {
+    // Search filter
+    const matched = applications.filter(app =>
+      app.candidate_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.candidate_email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    if (activeSubTab === 'applied') return matched.filter(c => c.status === 'APPLIED');
+    if (activeSubTab === 'shortlisted') return matched.filter(c => c.status === 'SHORTLISTED');
+    if (activeSubTab === 'screening') return matched.filter(c => c.status === 'RESUME_SCREENING');
+    if (activeSubTab === 'calls') return matched.filter(c => c.status === 'RECRUITER_CALL');
+    if (activeSubTab === 'assessments') return matched.filter(c => c.status === 'MCQ_STAGE' || c.status === 'CODING_STAGE');
+    if (activeSubTab === 'ai_interviews') return matched.filter(c => c.status === 'AI_INTERVIEW_STAGE');
+    if (activeSubTab === 'technical') return matched.filter(c => c.status === 'INTERVIEW_STAGE');
+    if (activeSubTab === 'manager') return matched.filter(c => c.status === 'MANAGER_ROUND');
+    if (activeSubTab === 'hr') return matched.filter(c => c.status === 'HR_ROUND');
+    if (activeSubTab === 'offers') return matched.filter(c => c.status === 'OFFER_STAGE');
+    if (activeSubTab === 'bgv') return matched.filter(c => c.status === 'BGV_STAGE');
+    if (activeSubTab === 'joined') return matched.filter(c => c.status === 'COMPLETED');
+    if (activeSubTab === 'rejected') return matched.filter(c => c.status === 'REJECTED');
+    return matched;
+  };
 
   const scoreColor = (s: number) =>
     s >= 80 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' :
@@ -226,381 +238,224 @@ export default function CandidatesDashboardPage() {
   const progress = pipeline.length > 0 ? Math.round((passedCount / pipeline.length) * 100) : 0;
 
   return (
-    <div style={{ display: 'flex', gap: '24px', height: '100%', minHeight: 0 }}>
-      {/* Left List */}
-      <div style={{ width: '360px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div>
-          <h1 className="text-xl font-bold text-white">Candidates Dashboard</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Automated ATS screening profiles</p>
-        </div>
-        {successMsg && <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-400">{successMsg}</div>}
-        {errorMsg && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">{errorMsg}</div>}
-        <div className="rounded-xl border border-white/5 bg-slate-900/60 p-3 space-y-2">
+    <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 120px)', minHeight: 0 }}>
+      {/* Left sub-options panel */}
+      <div style={{ width: '220px', flexShrink: 0, borderRight: '1px solid var(--border-color)', paddingRight: '16px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Candidates</h2>
+        {[
+          { id: 'all', label: '👥 All Candidates' },
+          { id: 'applied', label: '📥 Applications' },
+          { id: 'shortlisted', label: '⭐ Shortlisted' },
+          { id: 'screening', label: '📄 Resume Review' },
+          { id: 'calls', label: '📞 AI Screening Calls' },
+          { id: 'assessments', label: '📝 Assessments' },
+          { id: 'ai_interviews', label: '🤖 AI Interviews' },
+          { id: 'technical', label: '💻 Technical Interviews' },
+          { id: 'manager', label: '🏢 Hiring Manager Interviews' },
+          { id: 'hr', label: '💬 HR Discussion' },
+          { id: 'offers', label: '💰 Offers' },
+          { id: 'bgv', label: '🔍 Background Verification' },
+          { id: 'joined', label: '🎉 Joined' },
+          { id: 'rejected', label: '❌ Rejected' }
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => { setActiveSubTab(t.id as any); setSelectedApp(null); }}
+            style={{
+              textAlign: 'left',
+              width: '100%',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: activeSubTab === t.id ? 700 : 400,
+              color: activeSubTab === t.id ? '#fff' : 'var(--text-secondary)',
+              background: activeSubTab === t.id ? 'rgba(99,102,241,0.15)' : 'transparent',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Right panel: split candidates list or selected candidate profile */}
+      <div style={{ flex: 1, display: 'flex', gap: '20px', minWidth: 0, height: '100%' }}>
+        
+        {/* Candidates List Column */}
+        <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
           <input
             type="text" placeholder="Search candidates..."
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none"
           />
-          <div className="grid grid-cols-2 gap-2">
-            <select value={selectedJobId} onChange={e => setSelectedJobId(e.target.value)}
-              className="rounded-lg border border-white/10 bg-slate-950/40 px-2 py-1.5 text-xs text-white focus:outline-none">
-              <option value="ALL">All Jobs</option>
-              {jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
-            </select>
-            <select value={fitFilter} onChange={e => setFitFilter(e.target.value)}
-              className="rounded-lg border border-white/10 bg-slate-950/40 px-2 py-1.5 text-xs text-white focus:outline-none">
-              <option value="ALL">All Scores</option>
-              <option value="HIGH">≥80%</option>
-              <option value="MID">50-79%</option>
-              <option value="LOW">&lt;50%</option>
-            </select>
-          </div>
-          <button onClick={loadData} className="w-full rounded-lg bg-slate-800 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 transition">↻ Refresh</button>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
-          {loading ? (
-            <div className="flex h-40 items-center justify-center">
-              <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : filteredApps.length === 0 ? (
-            <div className="flex h-40 items-center justify-center text-xs text-slate-500">No candidates found.</div>
-          ) : filteredApps.map(app => (
-            <div key={app.id} onClick={() => setSelectedApp(app)}
-              className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
-                selectedApp?.id === app.id
-                  ? 'border-violet-500/50 bg-violet-500/5 shadow-lg shadow-violet-500/10'
-                  : 'border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/70'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-sm font-black text-violet-300">
-                  {app.candidate_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-                </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <p className="truncate text-sm font-semibold text-white">{app.candidate_name}</p>
-                  <p className="truncate text-xs text-slate-400">{app.candidate_email}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{app.job_title}</p>
-                </div>
-                <div className={`flex-shrink-0 rounded-lg border px-2 py-1 text-center ${scoreColor(app.fit_score)}`}>
-                  <p className="text-xs font-black">{Math.round(app.fit_score)}%</p>
-                  <p className="text-[9px] font-medium uppercase">ATS</p>
-                </div>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
+            {loading ? (
+              <div className="flex h-32 items-center justify-center">
+                <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
               </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                  {app.status.replace('_STAGE', '')}
-                </span>
-                <span className="text-[10px] text-slate-500">{new Date(app.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Right Details Panel with detailed tabs */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {!selectedApp ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-slate-900/20 text-center p-12">
-            <div className="text-6xl">👤</div>
-            <h2 className="text-lg font-semibold text-white">Select a Candidate</h2>
-            <p className="text-sm text-slate-400 max-w-xs">View demographics-blind screening profiles, interview transcripts, assessments, and communication logs.</p>
-          </div>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            {/* Candidate Summary Header */}
-            <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/30 to-indigo-500/30 text-xl font-black text-violet-300">
-                  {selectedApp.candidate_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">{selectedApp.candidate_name}</h2>
-                  <p className="text-sm text-slate-400">{selectedApp.candidate_email} · {selectedApp.job_title}</p>
-                </div>
-              </div>
-              <div className={`rounded-xl border px-4 py-2 ${scoreColor(selectedApp.fit_score)}`}>
-                <p className="text-2xl font-black">{Math.round(selectedApp.fit_score)}%</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">AI FIT SCORE</p>
-              </div>
-            </div>
-
-            {/* Tabs Navigation Bar */}
-            <div className="flex border-b border-white/5 mb-4 gap-2 overflow-x-auto pb-1">
-              {[
-                { id: 'profile', label: '👤 Profile' },
-                { id: 'timeline', label: '📊 Timeline' },
-                { id: 'assessment', label: '📝 Assessment' },
-                { id: 'interview', label: '🎙️ Interview' },
-                { id: 'documents', label: '📄 Documents' },
-                { id: 'communication', label: '💬 Communication' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg border whitespace-nowrap transition ${
-                    activeTab === tab.id
-                      ? 'border-violet-500 bg-violet-500/10 text-violet-300'
-                      : 'border-transparent text-slate-400 hover:text-white'
+            ) : getFilteredCandidates().length === 0 ? (
+              <p className="text-xs text-slate-500 text-center py-8">No candidates found.</p>
+            ) : (
+              getFilteredCandidates().map(app => (
+                <div key={app.id} onClick={() => setSelectedApp(app)}
+                  className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
+                    selectedApp?.id === app.id
+                      ? 'border-violet-500/50 bg-violet-500/5 shadow-lg shadow-violet-500/10'
+                      : 'border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/70'
                   }`}
                 >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Scrollable Content Pane */}
-            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-              {activeTab === 'profile' && (
-                <div className="space-y-5">
-                  {/* Personal details grid */}
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Candidate Details</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                      <div>
-                        <span className="text-slate-500">Name</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.candidate_name}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Email</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.candidate_email}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Phone</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.candidate_phone}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Current Company</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.raw_parsed_data?.current_company}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Current Salary</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.raw_parsed_data?.current_salary}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Expected Salary</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.raw_parsed_data?.expected_salary}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Notice Period</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.raw_parsed_data?.notice_period}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Location</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.raw_parsed_data?.location}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Work preference</span>
-                        <p className="font-semibold text-white mt-0.5">{selectedApp.raw_parsed_data?.work_preference}</p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p className="truncate text-sm font-semibold text-white">{app.candidate_name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{app.job_title}</p>
                     </div>
-                  </div>
-
-                  {/* Skills & Education */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-3">
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Skills Profile</h3>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedApp.raw_parsed_data?.skills?.map(skill => (
-                          <span key={skill} className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300 border border-white/5">{skill}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-3">
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Education Details</h3>
-                      <div className="space-y-2">
-                        {selectedApp.raw_parsed_data?.education?.map((edu, idx) => (
-                          <div key={idx} className="text-xs">
-                            <p className="font-bold text-white">{edu.degree}</p>
-                            <p className="text-slate-400">{edu.school} ({edu.year})</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Portfolio & Links */}
-                  <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-3">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Certifications & Portfolio</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div>
-                        <span className="text-slate-500">GitHub</span>
-                        <p className="text-violet-400 font-mono underline mt-0.5">{selectedApp.raw_parsed_data?.github}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">LinkedIn</span>
-                        <p className="text-violet-400 font-mono underline mt-0.5">{selectedApp.raw_parsed_data?.linkedin}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">Portfolio URL</span>
-                        <p className="text-violet-400 font-mono underline mt-0.5">{selectedApp.raw_parsed_data?.portfolio}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Projects */}
-                  <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-3">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ingested Core Projects</h3>
-                    <div className="space-y-3">
-                      {selectedApp.raw_parsed_data?.projects?.map((proj, idx) => (
-                        <div key={idx} className="text-xs border-b border-white/5 pb-2 last:border-b-0">
-                          <p className="font-bold text-white">{proj.title}</p>
-                          <p className="text-slate-400 mt-1 leading-relaxed">{proj.description}</p>
-                        </div>
-                      ))}
-                    </div>
+                    <span className={`flex-shrink-0 text-xs font-bold ${scoreColor(app.fit_score)}`}>{Math.round(app.fit_score)}%</span>
                   </div>
                 </div>
-              )}
-
-              {activeTab === 'timeline' && (
-                <div className="space-y-5">
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Recruitment Stage Progress</h3>
-                    <div className="space-y-1">
-                      {pipeline.map((stage, idx) => {
-                        const isPassed = stage.status === 'PASSED';
-                        const isFailed = stage.status === 'FAILED';
-                        const isLocked = stage.status === 'LOCKED';
-                        return (
-                          <div key={stage.id} className="flex items-center gap-3 py-1 text-xs">
-                            <div className={`flex h-6 w-6 items-center justify-center rounded-lg border text-[10px] ${
-                              isPassed ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-400' :
-                              isFailed ? 'border-rose-500/50 bg-rose-500/20 text-rose-400' :
-                              isLocked ? 'border-white/5 bg-slate-900/50 text-slate-600' :
-                              'border-amber-500/50 bg-amber-500/10 text-amber-400'
-                            }`}>
-                              {isPassed ? '✓' : isFailed ? '✗' : isLocked ? '🔒' : STAGE_ICONS[stage.stage_number] || '🎯'}
-                            </div>
-                            <span className={`font-semibold ${isLocked ? 'text-slate-600' : 'text-slate-200'}`}>{stage.stage_name}</span>
-                            <span className={`ml-auto rounded border px-1.5 py-0.5 text-[8px] font-black uppercase ${getStatusStyle(stage.status)}`}>
-                              {stage.status}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'assessment' && (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assessment Scores Matrix</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                      <div className="rounded-lg bg-slate-900/60 p-3 border border-white/5">
-                        <span className="text-slate-500">MCQ Score</span>
-                        <p className="text-lg font-black text-white mt-0.5">85 / 100</p>
-                      </div>
-                      <div className="rounded-lg bg-slate-900/60 p-3 border border-white/5">
-                        <span className="text-slate-500">Coding Score</span>
-                        <p className="text-lg font-black text-white mt-0.5">90 / 100</p>
-                      </div>
-                      <div className="rounded-lg bg-slate-900/60 p-3 border border-white/5">
-                        <span className="text-slate-500">Assignment Score</span>
-                        <p className="text-lg font-black text-white mt-0.5">95 / 100</p>
-                      </div>
-                      <div className="rounded-lg bg-slate-900/60 p-3 border border-white/5">
-                        <span className="text-slate-500">SQL Score</span>
-                        <p className="text-lg font-black text-white mt-0.5">80 / 100</p>
-                      </div>
-                      <div className="rounded-lg bg-slate-900/60 p-3 border border-white/5">
-                        <span className="text-slate-500">Communication Score</span>
-                        <p className="text-lg font-black text-white mt-0.5">88 / 100</p>
-                      </div>
-                      <div className="rounded-lg bg-slate-900/60 p-3 border border-white/5">
-                        <span className="text-slate-500">English Score</span>
-                        <p className="text-lg font-black text-white mt-0.5">92 / 100</p>
-                      </div>
-                    </div>
-                    <div className="border-t border-white/5 pt-3 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="text-slate-500">Total Score Average</span>
-                        <p className="text-xl font-black text-emerald-400 mt-0.5">88.3%</p>
-                      </div>
-                      <span className="rounded bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 font-black text-emerald-400 uppercase text-[10px]">
-                        PASS
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'interview' && (
-                <div className="space-y-4">
-                  {/* AI Interview */}
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-2 text-xs">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">AI Voice Interview Transcript</h3>
-                    <div className="bg-slate-900/50 p-3 rounded-lg border border-white/5 space-y-2 font-mono text-[11px]">
-                      <p className="text-violet-400">🤖 AI Interviewer: Can you describe how you configure database pool limits?</p>
-                      <p className="text-slate-300 pl-4">👤 Candidate: We configure pool limits based on our concurrent container count and PostgreSQL connection capacity limits to prevent locking.</p>
-                    </div>
-                  </div>
-
-                  {/* Feedback grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-2">
-                      <h4 className="font-bold text-slate-400 uppercase">Technical Interview Feedback</h4>
-                      <p className="text-slate-300 italic">"Candidate demonstrated excellent modular coding principles and detailed PostgreSQL indexing configurations. Strong hire recommendation."</p>
-                    </div>
-                    <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-2">
-                      <h4 className="font-bold text-slate-400 uppercase">Hiring Manager Feedback</h4>
-                      <p className="text-slate-300 italic">"Strong architectural match. Culture alignment fits our autonomy rules perfectly."</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'documents' && (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ingested Credentials & Documents</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                      {[
-                        { name: 'Government ID (Aadhaar / Passport)', size: '1.2 MB' },
-                        { name: 'Degree Graduation Certificates', size: '2.4 MB' },
-                        { name: 'Last 3 Months Salary Payslips', size: '920 KB' },
-                        { name: 'Relieving Experience Letter', size: '1.5 MB' },
-                        { name: 'Signed Offer Letter Copy', size: '3.1 MB' },
-                        { name: 'BGV Address Verification forms', size: '840 KB' }
-                      ].map((doc, idx) => (
-                        <div key={idx} className="flex justify-between items-center bg-slate-900/60 p-3 rounded-lg border border-white/5">
-                          <span className="text-slate-300">📄 {doc.name}</span>
-                          <span className="text-violet-400 font-bold underline cursor-pointer text-[10px]">Download ({doc.size})</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'communication' && (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Interactive Candidate Feed</h3>
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2 text-xs">
-                      <div className="border-l-2 border-violet-500 pl-3 space-y-1">
-                        <p className="font-semibold text-white">💬 WhatsApp Notification Sent</p>
-                        <p className="text-slate-400">"Your assessment link is active. Please complete within 48 hours."</p>
-                        <span className="text-[10px] text-slate-500">10 mins ago</span>
-                      </div>
-                      <div className="border-l-2 border-emerald-500 pl-3 space-y-1">
-                        <p className="font-semibold text-white">📨 Email Dispatch (System Auto-Shortlisted)</p>
-                        <p className="text-slate-400">Sent resume screening results + links mapping technical assignments.</p>
-                        <span className="text-[10px] text-slate-500">1 hour ago</span>
-                      </div>
-                      <div className="border-l-2 border-amber-500 pl-3 space-y-1">
-                        <p className="font-semibold text-white">📝 Custom Recruiter Note</p>
-                        <p className="text-slate-400">"Verified notice period. Candidate is willing to negotiate join date."</p>
-                        <span className="text-[10px] text-slate-500">Yesterday</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Candidate Detail Column */}
+        <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {!selectedApp ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-slate-900/20 text-center p-12">
+              <div className="text-5xl">👤</div>
+              <h2 className="text-sm font-bold text-white">Select a Candidate</h2>
+              <p className="text-xs text-slate-400 max-w-xs">Click a candidate on the left to show the profile parameters on the right.</p>
+            </div>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }} className="space-y-4">
+              <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                <div>
+                  <h2 className="text-lg font-black text-white">{selectedApp.candidate_name}</h2>
+                  <p className="text-xs text-slate-500">{selectedApp.candidate_email} · {selectedApp.job_title}</p>
+                </div>
+                <div className={`rounded-xl border px-3 py-1 text-center ${scoreColor(selectedApp.fit_score)}`}>
+                  <span className="text-lg font-black">{Math.round(selectedApp.fit_score)}%</span>
+                </div>
+              </div>
+
+              {/* Profile sub-tabs */}
+              <div className="flex border-b border-white/5 gap-1 pb-1 overflow-x-auto">
+                {[
+                  { id: 'profile', label: 'Profile' },
+                  { id: 'timeline', label: 'Timeline' },
+                  { id: 'assessment', label: 'Assessments' },
+                  { id: 'interview', label: 'Interviews' },
+                  { id: 'documents', label: 'Documents' },
+                  { id: 'communication', label: 'Feed' }
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setProfileTab(t.id as any)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border whitespace-nowrap transition ${
+                      profileTab === t.id
+                        ? 'border-violet-500 bg-violet-500/10 text-violet-300'
+                        : 'border-transparent text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content panel */}
+              <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+                {profileTab === 'profile' && (
+                  <div className="space-y-4 text-xs">
+                    {/* Personal data */}
+                    <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3">
+                      <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Personal Details</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <p className="text-slate-400">Current Salary: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.current_salary}</span></p>
+                        <p className="text-slate-400">Expected Salary: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.expected_salary}</span></p>
+                        <p className="text-slate-400">Notice Period: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.notice_period}</span></p>
+                        <p className="text-slate-400">Location: <span className="text-white font-semibold">{selectedApp.raw_parsed_data?.location}</span></p>
+                      </div>
+                    </div>
+
+                    {/* Skills & Education */}
+                    <div className="rounded-xl border border-white/5 bg-slate-950/20 p-4 space-y-2">
+                      <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Technical Skills</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedApp.raw_parsed_data?.skills?.map(s => (
+                          <span key={s} className="rounded bg-slate-800 border border-white/5 px-2 py-0.5 text-[10px] text-slate-300">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {profileTab === 'timeline' && (
+                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-2">
+                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-3">Recruitment Timeline</h4>
+                    <div className="space-y-1">
+                      {pipeline.map(stage => (
+                        <div key={stage.id} className="flex items-center gap-2 py-1 text-xs">
+                          <span>{STAGE_ICONS[stage.stage_number] || '🎯'}</span>
+                          <span className="text-slate-300 font-semibold">{stage.stage_name}</span>
+                          <span className={`ml-auto text-[9px] font-bold ${getStatusStyle(stage.status)}`}>{stage.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {profileTab === 'assessment' && (
+                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3 text-xs">
+                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Assessment Dashboard</h4>
+                    <div className="grid grid-cols-2 gap-2 text-center">
+                      <div className="bg-slate-900 border border-white/5 p-2 rounded">
+                        <p className="text-[10px] text-slate-500 uppercase">MCQ Score</p>
+                        <p className="text-base font-black text-white mt-0.5">85/100</p>
+                      </div>
+                      <div className="bg-slate-900 border border-white/5 p-2 rounded">
+                        <p className="text-[10px] text-slate-500 uppercase">Coding Score</p>
+                        <p className="text-base font-black text-white mt-0.5">90/100</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {profileTab === 'interview' && (
+                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3 text-xs">
+                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Interview Evaluations</h4>
+                    <div className="bg-slate-900 p-3 rounded font-mono text-[10px] text-slate-300 leading-relaxed">
+                      <p className="text-violet-400">🤖 AI Interviewer:</p>
+                      <p className="pl-3">"Candidate successfully completed all OS scheduling evaluations."</p>
+                    </div>
+                  </div>
+                )}
+
+                {profileTab === 'documents' && (
+                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-2 text-xs">
+                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Document Ingestion Checklist</h4>
+                    {['Government ID Card', 'Degree Graduation Certificate', 'Relieving Experience Letter'].map((doc, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-slate-900 border border-white/5 p-2.5 rounded">
+                        <span className="text-slate-300">📄 {doc}</span>
+                        <span className="text-violet-400 font-bold underline cursor-pointer text-[10px]">View Document</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {profileTab === 'communication' && (
+                  <div className="rounded-xl border border-white/5 bg-slate-950/40 p-4 space-y-3 text-xs">
+                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Recruitment Activity Feed</h4>
+                    <div className="space-y-2 font-mono text-[10px]">
+                      <p className="text-slate-400">💬 WhatsApp dispatch confirmed matching slot schedule.</p>
+                      <p className="text-slate-400">📨 Email automated screening recommendation logged.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

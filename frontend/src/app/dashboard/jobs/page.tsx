@@ -35,6 +35,9 @@ export default function JobsDashboardPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Active sub-option tab
+  const [activeSubTab, setActiveSubTab] = useState<'create' | 'all' | 'draft' | 'published' | 'closed'>('all');
+
   // JD generator inputs
   const [genTitle, setGenTitle] = useState('');
   const [genDeptName, setGenDeptName] = useState('');
@@ -47,8 +50,12 @@ export default function JobsDashboardPage() {
   const [newDesc, setNewDesc] = useState('');
   const [newRequirements, setNewRequirements] = useState('');
   const [newDeptId, setNewDeptId] = useState('');
+  const [newSalary, setNewSalary] = useState('');
+  const [newExp, setNewExp] = useState('');
+  const [newEmpType, setNewEmpType] = useState('Full-Time');
+  const [newDesignation, setNewDesignation] = useState('');
+  const [newBenefits, setNewBenefits] = useState('');
   const [saving, setSaving] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Applicants modal
   const [viewApplicantsJobId, setViewApplicantsJobId] = useState<string | null>(null);
@@ -119,7 +126,6 @@ export default function JobsDashboardPage() {
         setNewDesc(proposal.description);
         setNewRequirements(proposal.requirements.join(', '));
         
-        // Auto-select department matching the name if it exists
         const matched = departments.find(d => d.name.toLowerCase() === genDeptName.toLowerCase());
         if (matched) {
           setNewDeptId(matched.id);
@@ -127,7 +133,6 @@ export default function JobsDashboardPage() {
           setNewDeptId(departments[0].id);
         }
         
-        setShowCreateModal(true);
         setSuccess('JD Proposal generated successfully! Review and save below.');
       } else {
         const data = await res.json();
@@ -160,59 +165,57 @@ export default function JobsDashboardPage() {
           title: newTitle,
           description: newDesc,
           department_id: newDeptId,
-          requirements: newRequirements.split(',').map(r => r.trim()).filter(Boolean)
+          requirements: newRequirements.split(',').map(r => r.trim()).filter(Boolean),
+          metadata: {
+            salary: newSalary,
+            experience: newExp,
+            employment_type: newEmpType,
+            designation: newDesignation,
+            benefits: newBenefits
+          }
         })
       });
       
       if (res.ok) {
-        const created = await res.json();
-        setJobs([created, ...jobs]);
-        setShowCreateModal(false);
-        setSuccess('Job posting draft created successfully.');
-        
-        // Reset fields
+        setSuccess('Job Posting draft created successfully!');
         setNewTitle('');
         setNewDesc('');
         setNewRequirements('');
-        setNewDeptId('');
-        setGenTitle('');
-        setGenDeptName('');
-        setGenSkills('');
+        setNewSalary('');
+        setNewExp('');
+        setNewDesignation('');
+        setNewBenefits('');
+        await loadData();
+        setActiveSubTab('all');
       } else {
         const data = await res.json();
-        setError(data.detail || 'Failed to create job posting.');
+        setError(data.detail || 'Failed to create job.');
       }
     } catch (err) {
-      setError('Failed to save job posting.');
+      setError('Connection error saving job posting.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleApproveJob = async (id: string) => {
+  const handleApproveJob = async (jobId: string) => {
     setError('');
     setSuccess('');
     try {
-      const res = await clientApprove(id);
+      const headers = getHeaders();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${jobId}/approve`, {
+        method: 'POST',
+        headers
+      });
       if (res.ok) {
-        const updated = await res.json();
-        setJobs(jobs.map(j => j.id === id ? updated : j));
-        setSuccess('Job posting approved for distribution channels.');
+        setSuccess('Job Posting legal approval logged.');
+        await loadData();
       } else {
-        const data = await res.json();
-        setError(data.detail || 'Failed to approve job.');
+        setError('Failed to complete job post approval.');
       }
-    } catch (err) {
+    } catch {
       setError('Connection error.');
     }
-  };
-
-  const clientApprove = (id: string) => {
-    const headers = getHeaders();
-    return fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${id}/approve`, {
-      method: 'POST',
-      headers
-    });
   };
 
   const handlePublishJob = async (e: FormEvent) => {
@@ -232,384 +235,287 @@ export default function JobsDashboardPage() {
       });
       
       if (res.ok) {
-        const updated = await res.json();
-        setJobs(jobs.map(j => j.id === publishingJobId ? updated : j));
+        setSuccess('Job Distributed to sourcing partners and referral links established.');
         setPublishingJobId(null);
-        setSuccess('Job posting distributed to target job boards successfully.');
+        await loadData();
       } else {
-        const data = await res.json();
-        setError(data.detail || 'Failed to publish job.');
+        setError('Sourcing distribution failed.');
       }
-    } catch (err) {
-      setError('Failed to distribute job.');
+    } catch {
+      setError('Connection error.');
     } finally {
       setPublishing(false);
     }
   };
 
-  if (loading) {
-    return <div className="card text-center" style={{ padding: '40px' }}><p>Loading sourcing boards...</p></div>;
-  }
+  const getFilteredJobs = () => {
+    if (activeSubTab === 'draft') return jobs.filter(j => j.status === 'DRAFT');
+    if (activeSubTab === 'published') return jobs.filter(j => j.status === 'PUBLISHED');
+    if (activeSubTab === 'closed') return jobs.filter(j => j.status === 'CLOSED');
+    return jobs;
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1>Recruitment JDs & Channels</h1>
-          <p className="text-secondary">Generate policy-compliant job descriptions and distribute tracking referrals across boards.</p>
-        </div>
-        <button 
-          onClick={() => setShowCreateModal(true)} 
-          className="button button-primary"
-        >
-          âž• Create Job Manually
-        </button>
-      </div>
-
-      {success && <div className="alert alert-success">{success}</div>}
-      {error && <div className="alert alert-danger">{error}</div>}
-
-      {/* AI Job Description Generator Console */}
-      <div className="card">
-        <h3>Autonomous Job Description Agent</h3>
-        <p className="text-secondary" style={{ fontSize: 13, marginTop: -5 }}>
-          Generates gender-neutral, demographic-blind job drafts formatted using system registry prompts.
-        </p>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 2fr 1fr 1fr', gap: 12, alignItems: 'flex-end', marginTop: 12 }}>
-          <div>
-            <label style={{ fontSize: 12.5, fontWeight: 500, display: 'block', marginBottom: 4 }}>Job Title</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="e.g. Senior Rust Engineer"
-              value={genTitle}
-              onChange={e => setGenTitle(e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 12.5, fontWeight: 500, display: 'block', marginBottom: 4 }}>Department</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="e.g. Core Platform"
-              value={genDeptName}
-              onChange={e => setGenDeptName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 12.5, fontWeight: 500, display: 'block', marginBottom: 4 }}>Core Skills (Comma separated)</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Rust, Tokio, Concurrency, gRPC"
-              value={genSkills}
-              onChange={e => setGenSkills(e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 12.5, fontWeight: 500, display: 'block', marginBottom: 4 }}>Autonomy Level</label>
-            <select
-              value={genAutonomy}
-              onChange={e => setGenAutonomy(e.target.value)}
-              className="form-control"
-            >
-              <option value="ASSISTED">Assisted</option>
-              <option value="SEMI_AUTONOMOUS">Semi-Autonomous</option>
-              <option value="AUTONOMOUS">Autonomous</option>
-            </select>
-          </div>
-          <button 
-            onClick={handleGenerateProposal} 
-            className="button button-primary" 
-            disabled={generating}
-            style={{ width: '100%' }}
+    <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 120px)', minHeight: 0 }}>
+      {/* Left sub-options panel */}
+      <div style={{ width: '220px', flexShrink: 0, borderRight: '1px solid var(--border-color)', paddingRight: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Job Options</h2>
+        {[
+          { id: 'create', label: '➕ Create Job' },
+          { id: 'all', label: '💼 Job Listings' },
+          { id: 'draft', label: '📝 Draft Jobs' },
+          { id: 'published', label: '🚀 Published Jobs' },
+          { id: 'closed', label: '🔒 Closed Jobs' }
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveSubTab(t.id as any)}
+            style={{
+              textAlign: 'left',
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: activeSubTab === t.id ? 700 : 400,
+              color: activeSubTab === t.id ? '#fff' : 'var(--text-secondary)',
+              background: activeSubTab === t.id ? 'rgba(99,102,241,0.15)' : 'transparent',
+              border: 'none',
+              cursor: 'pointer'
+            }}
           >
-            {generating ? 'Drafting...' : 'Draft JD'}
+            {t.label}
           </button>
-        </div>
-      </div>
-
-      {/* Main Jobs Listing Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 20 }}>
-        {jobs.map(job => (
-          <div key={job.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 220 }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <span 
-                  className="badge" 
-                  style={{
-                    background: job.status === 'PUBLISHED' ? 'rgba(16,185,129,0.1)' : job.status === 'APPROVED' ? 'rgba(99,102,241,0.1)' : 'rgba(156,163,175,0.1)',
-                    color: job.status === 'PUBLISHED' ? '#10b981' : job.status === 'APPROVED' ? '#6366f1' : '#9ca3af',
-                  }}
-                >
-                  {job.status}
-                </span>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {new Date(job.created_at).toLocaleDateString()}
-                </span>
-              </div>
-              <h2 style={{ fontSize: 18, margin: '4px 0' }}>{job.title}</h2>
-              <span className="text-secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
-                Dept Code: {job.department_id.substr(0, 8)}...
-              </span>
-              
-              <div 
-                style={{ 
-                  fontSize: 13, 
-                  maxHeight: 100, 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
-                  display: '-webkit-box', 
-                  WebkitLineClamp: 3, 
-                  WebkitBoxOrient: 'vertical',
-                  color: 'var(--text-secondary)',
-                  lineHeight: 1.5,
-                  marginBottom: 16
-                }}
-              >
-                {job.description}
-              </div>
-            </div>
-
-            <div>
-              <hr style={{ margin: '12px 0' }} />
-              
-              {/* Sourcing Channel Referral Links */}
-              {job.status === 'PUBLISHED' && Object.keys(job.sourcing_channels).length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-                    Referral Sourcing Channels:
-                  </span>
-                  {Object.entries(job.sourcing_channels).map(([chan, info]) => (
-                    <div key={chan} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.02)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                      <span className="badge" style={{ background: 'var(--color-primary-500)', color: '#fff', fontSize: 10 }}>{chan}</span>
-                      <input
-                        type="text"
-                        readOnly
-                        value={info.referral_url}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 11, width: '100%', outline: 'none' }}
-                        onClick={e => (e.target as HTMLInputElement).select()}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Action Operations */}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                {job.status === 'DRAFT' && (
-                  <button 
-                    onClick={() => handleApproveJob(job.id)} 
-                    className="button"
-                    style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)' }}
-                  >
-                    âœ”ï¸ Legal & Admin Approve
-                  </button>
-                )}
-                {job.status === 'APPROVED' && (
-                  <button 
-                    onClick={() => setPublishingJobId(job.id)} 
-                    className="button button-primary"
-                  >
-                    🚀 Distribute Channels
-                  </button>
-                )}
-                {job.status === 'PUBLISHED' && (
-                  <button
-                    onClick={async () => {
-                      setViewApplicantsJobId(job.id);
-                      setViewApplicantsJobTitle(job.title);
-                      setApplicants([]);
-                      setApplicantsLoading(true);
-                      try {
-                        const res = await fetch(
-                          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications?job_id=${job.id}`,
-                          { headers: getHeaders() }
-                        );
-                        if (res.ok) {
-                          const data = await res.json();
-                          setApplicants(data);
-                        }
-                      } catch { /* ignore */ }
-                      finally { setApplicantsLoading(false); }
-                    }}
-                    className="button"
-                    style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
-                  >
-                    👥 View Applicants
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
         ))}
       </div>
 
-      {/* 1. Create / Edit Job Modal */}
-      {showCreateModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: 650, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2>Create Job Posting Draft</h2>
-            <form onSubmit={handleCreateJob} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Job Title</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  required
-                  value={newTitle}
-                  onChange={e => setNewTitle(e.target.value)}
-                />
+      {/* Right Content Panel */}
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }} className="space-y-4">
+        {error && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3.5 text-xs text-rose-400">{error}</div>}
+        {success && <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs text-emerald-400">{success}</div>}
+
+        {activeSubTab === 'create' ? (
+          <div className="space-y-6">
+            {/* AI Generator */}
+            <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-5 space-y-4">
+              <h3 className="text-xs font-bold text-violet-400 uppercase tracking-wider">🤖 AI JD Proposal Generator</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input type="text" placeholder="Title: e.g. Lead React Developer" value={genTitle} onChange={e => setGenTitle(e.target.value)}
+                  className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none" />
+                <input type="text" placeholder="Department: e.g. Frontend Engineering" value={genDeptName} onChange={e => setGenDeptName(e.target.value)}
+                  className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none" />
+                <input type="text" placeholder="Skills: React, TypeScript, Redux" value={genSkills} onChange={e => setGenSkills(e.target.value)}
+                  className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none col-span-1" />
+              </div>
+              <button onClick={handleGenerateProposal} disabled={generating}
+                className="w-full rounded-lg bg-violet-600 hover:bg-violet-500 py-2.5 text-xs font-bold text-white transition disabled:opacity-50">
+                {generating ? 'Generating Proposal...' : 'Create Draft Proposal'}
+              </button>
+            </div>
+
+            {/* Manual Form */}
+            <form onSubmit={handleCreateJob} className="rounded-xl border border-white/5 bg-slate-900/40 p-5 space-y-4 text-xs">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Job Specifications</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-slate-400">Designation / Job Title</label>
+                  <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} required placeholder="e.g. Senior Software Engineer"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white placeholder-slate-500 focus:outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-slate-400">Target Department</label>
+                  <select value={newDeptId} onChange={e => setNewDeptId(e.target.value)} required
+                    className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none">
+                    <option value="">Select Department...</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Target Department</label>
-                <select 
-                  className="form-control" 
-                  required
-                  value={newDeptId}
-                  onChange={e => setNewDeptId(e.target.value)}
-                >
-                  <option value="">Select Department...</option>
-                  {departments.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-slate-400">Experience Required</label>
+                  <input type="text" value={newExp} onChange={e => setNewExp(e.target.value)} placeholder="e.g. 3-5 Years"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-slate-400">Salary Package</label>
+                  <input type="text" value={newSalary} onChange={e => setNewSalary(e.target.value)} placeholder="e.g. 15-20 LPA"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-slate-400">Employment Type</label>
+                  <select value={newEmpType} onChange={e => setNewEmpType(e.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none">
+                    <option value="Full-Time">Full-Time</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Internship">Internship</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-slate-400">Designation Level</label>
+                  <input type="text" value={newDesignation} onChange={e => setNewDesignation(e.target.value)} placeholder="e.g. Senior"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none" />
+                </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Core Requirements (comma separated)</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={newRequirements}
-                  onChange={e => setNewRequirements(e.target.value)}
-                />
+              <div className="space-y-1">
+                <label className="text-slate-400">Skills Profile (comma separated)</label>
+                <input type="text" value={newRequirements} onChange={e => setNewRequirements(e.target.value)} placeholder="React, TypeScript, Tailwind"
+                  className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none" />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Markdown Job Description</label>
-                <textarea
-                  rows={8}
-                  className="form-control"
-                  style={{ fontFamily: 'monospace', fontSize: 13 }}
-                  required
-                  value={newDesc}
-                  onChange={e => setNewDesc(e.target.value)}
-                />
+              <div className="space-y-1">
+                <label className="text-slate-400">Responsibilities & Job Description</label>
+                <textarea rows={6} value={newDesc} onChange={e => setNewDesc(e.target.value)} required placeholder="Add full job description details..."
+                  className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none resize-none" />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-                <button type="button" onClick={() => setShowCreateModal(false)} className="button">
-                  Cancel
-                </button>
-                <button type="submit" className="button button-primary" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Job Draft'}
-                </button>
+              <div className="space-y-1">
+                <label className="text-slate-400">Benefits & Perks</label>
+                <input type="text" value={newBenefits} onChange={e => setNewBenefits(e.target.value)} placeholder="Medical Insurance, 401k match, remote setup"
+                  className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white focus:outline-none" />
               </div>
+
+              <button type="submit" disabled={saving}
+                className="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 py-3 text-xs font-bold text-white transition disabled:opacity-50">
+                {saving ? 'Saving Job Post...' : 'Save Job Post Draft'}
+              </button>
             </form>
           </div>
-        </div>
-      )}
-
-      {/* 2. Publish Sourcing Channels Modal */}
-      {publishingJobId && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: 450, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2>Distribute Sourcing Channels</h2>
-            <p className="text-secondary" style={{ fontSize: 13, marginTop: -10 }}>
-              Distribute this approved job posting to external platforms and generate unique referral trackers.
-            </p>
-            
-            <form onSubmit={handlePublishJob} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
-                  { id: 'linkedin', label: 'LinkedIn Jobs Portal' },
-                  { id: 'indeed', label: 'Indeed Recruitment' },
-                  { id: 'glassdoor', label: 'Glassdoor Sourcing' }
-                ].map(chan => (
-                  <label key={chan.id} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedChannels.includes(chan.id)}
-                      onChange={e => {
-                        const next = e.target.checked 
-                          ? [...selectedChannels, chan.id] 
-                          : selectedChannels.filter(x => x !== chan.id);
-                        setSelectedChannels(next);
-                      }}
-                    />
-                    <strong>{chan.label}</strong>
-                  </label>
-                ))}
+        ) : (
+          /* Grid of Jobs listings */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {loading ? (
+              <div className="col-span-2 flex h-40 items-center justify-center">
+                <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-                <button type="button" onClick={() => setPublishingJobId(null)} className="button">
-                  Cancel
-                </button>
-                <button type="submit" className="button button-primary" disabled={publishing}>
-                  {publishing ? 'Distributing...' : 'Confirm Sourcing Launch'}
-                </button>
+            ) : getFilteredJobs().length === 0 ? (
+              <div className="col-span-2 rounded-2xl border border-dashed border-white/10 p-12 text-center text-slate-500">
+                <div className="text-4xl mb-3">💼</div>
+                <p className="text-sm">No jobs registered in this section.</p>
               </div>
-            </form>
+            ) : (
+              getFilteredJobs().map(job => (
+                <div key={job.id} className="rounded-xl border border-white/5 bg-slate-900/40 p-5 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-base font-bold text-white">{job.title}</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Status: <span className="text-emerald-400 font-bold">{job.status}</span></p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">{job.description}</p>
+
+                  <div className="flex flex-wrap gap-1">
+                    {job.requirements.slice(0, 4).map(req => (
+                      <span key={req} className="rounded bg-slate-800 border border-white/5 px-2 py-0.5 text-[10px] text-slate-300">{req}</span>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-white/5 pt-3 flex gap-2 justify-end">
+                    {job.status === 'DRAFT' && (
+                      <button onClick={() => handleApproveJob(job.id)}
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-500 transition">
+                        ✔ Legal & Admin Approve
+                      </button>
+                    )}
+                    {job.status === 'APPROVED' && (
+                      <button onClick={() => setPublishingJobId(job.id)}
+                        className="rounded-lg bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-violet-500 transition">
+                        🚀 Distribute Channels
+                      </button>
+                    )}
+                    {job.status === 'PUBLISHED' && (
+                      <button
+                        onClick={async () => {
+                          setViewApplicantsJobId(job.id);
+                          setViewApplicantsJobTitle(job.title);
+                          setApplicants([]);
+                          setApplicantsLoading(true);
+                          try {
+                            const res = await fetch(
+                              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications?job_id=${job.id}`,
+                              { headers: getHeaders() }
+                            );
+                            if (res.ok) setApplicants(await res.json());
+                          } catch {}
+                          finally { setApplicantsLoading(false); }
+                        }}
+                        className="rounded-lg bg-slate-800 border border-white/10 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:text-white transition"
+                      >
+                        👥 View Applicants
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* 3. View Applicants Modal */}
+      {/* View Applicants Modal */}
       {viewApplicantsJobId && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: 680, maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="rounded-xl border border-white/10 bg-slate-900 p-6 w-[640px] max-h-[80vh] flex flex-col gap-4">
+            <div className="flex justify-between items-center border-b border-white/5 pb-2">
               <div>
-                <h2 style={{ margin: 0 }}>👥 Applicants</h2>
-                <p style={{ margin: 0, fontSize: 13, opacity: 0.6 }}>{viewApplicantsJobTitle}</p>
+                <h3 className="text-base font-bold text-white">Job Applicants</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{viewApplicantsJobTitle}</p>
               </div>
-              <button onClick={() => { setViewApplicantsJobId(null); setApplicants([]); }} className="button" style={{ padding: '4px 12px' }}>✕ Close</button>
+              <button onClick={() => { setViewApplicantsJobId(null); setApplicants([]); }} className="text-slate-400 hover:text-white font-bold">✕ Close</button>
             </div>
 
             {applicantsLoading ? (
-              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Loading applicants...</div>
-            ) : applicants.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-                <p>No applicants yet for this job.</p>
-                <p style={{ fontSize: 12, opacity: 0.6 }}>Applications submitted from VidyamargAI will appear here automatically.</p>
+              <div className="flex h-32 items-center justify-center">
+                <div className="w-6 h-6 border border-violet-500 border-t-transparent rounded-full animate-spin" />
               </div>
+            ) : applicants.length === 0 ? (
+              <p className="text-xs text-slate-500 text-center py-8">No applicants have registered for this posting yet.</p>
             ) : (
-              <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p style={{ fontSize: 12, opacity: 0.6 }}>{applicants.length} candidate{applicants.length !== 1 ? 's' : ''} applied</p>
-                {applicants.map(app => {
-                  const score = Math.round(app.fit_score);
-                  const scoreColor = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-                  return (
-                    <div key={app.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-                      <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#a5b4fc', flexShrink: 0 }}>
-                        {app.candidate_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{app.candidate_name}</p>
-                        <p style={{ margin: 0, fontSize: 12, opacity: 0.6 }}>{app.candidate_email}</p>
-                        {app.screening_feedback && <p style={{ margin: '4px 0 0', fontSize: 11, opacity: 0.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{app.screening_feedback}</p>}
-                      </div>
-                      <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 18, fontWeight: 900, color: scoreColor }}>{score}%</div>
-                        <div style={{ fontSize: 10, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1 }}>AI Fit</div>
-                      </div>
-                      <div style={{ flexShrink: 0 }}>
-                        <span className="badge" style={{ background: app.status === 'REJECTED' ? 'rgba(239,68,68,0.15)' : app.status === 'COMPLETED' ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)', color: app.status === 'REJECTED' ? '#f87171' : app.status === 'COMPLETED' ? '#34d399' : '#a5b4fc', border: `1px solid ${app.status === 'REJECTED' ? 'rgba(239,68,68,0.3)' : app.status === 'COMPLETED' ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.3)'}`, fontSize: 10 }}>
-                          {app.status.replace('_STAGE', '')}
-                        </span>
-                        <div style={{ fontSize: 10, opacity: 0.4, marginTop: 3, textAlign: 'center' }}>{new Date(app.created_at).toLocaleDateString()}</div>
-                      </div>
+              <div className="overflow-y-auto space-y-2 flex-1 pr-1">
+                {applicants.map(app => (
+                  <div key={app.id} className="flex justify-between items-center bg-slate-950/40 p-3 rounded-lg border border-white/5 text-xs">
+                    <div>
+                      <p className="font-semibold text-white">{app.candidate_name}</p>
+                      <p className="text-slate-500 text-[10px]">{app.candidate_email}</p>
                     </div>
-                  );
-                })}
+                    <div className="text-right">
+                      <p className="font-bold text-violet-400">{Math.round(app.fit_score)}% AI Fit</p>
+                      <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[8px] font-black text-slate-400 uppercase">{app.status}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Publish Channels Modal */}
+      {publishingJobId && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="rounded-xl border border-white/10 bg-slate-900 p-6 w-[400px] space-y-4">
+            <h3 className="text-base font-bold text-white">Distribute Job Channels</h3>
+            <div className="space-y-2 text-xs">
+              {['linkedin', 'indeed', 'glassdoor'].map(chan => (
+                <label key={chan} className="flex items-center gap-2 cursor-pointer text-slate-300">
+                  <input type="checkbox" checked={selectedChannels.includes(chan)}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedChannels(prev => [...prev, chan]);
+                      else setSelectedChannels(prev => prev.filter(c => c !== chan));
+                    }}
+                  />
+                  <span className="capitalize">{chan}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 text-xs">
+              <button onClick={() => setPublishingJobId(null)} className="rounded border border-white/10 px-3 py-1.5 text-slate-400 hover:text-white transition">Cancel</button>
+              <button onClick={handlePublishJob} disabled={publishing} className="rounded bg-violet-600 px-4 py-1.5 font-bold text-white hover:bg-violet-500 transition">
+                {publishing ? 'Publishing...' : 'Confirm Sourcing'}
+              </button>
+            </div>
           </div>
         </div>
       )}
