@@ -48,11 +48,13 @@ async def public_list_jobs(
     List all PUBLISHED jobs for this tenant — no auth required.
     Used by VidyamargAI candidate portal to browse open positions.
     """
-    from sqlalchemy import select
+    from sqlalchemy import select, text
     from app.models.job import Job
     import uuid as _uuid
 
     t_uuid = _uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     stmt = select(Job).where(
         Job.tenant_id == t_uuid,
         Job.status.in_(["PUBLISHED", "APPROVED", "DRAFT"])
@@ -86,12 +88,14 @@ async def public_get_job(
     """
     Get a single published job by ID — no auth required.
     """
-    from sqlalchemy import select
+    from sqlalchemy import select, text
     from app.models.job import Job
     import uuid as _uuid
 
     t_uuid = _uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
     j_uuid = _uuid.UUID(job_id) if isinstance(job_id, str) else job_id
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     stmt = select(Job).where(Job.tenant_id == t_uuid, Job.id == j_uuid)
     result = await db.execute(stmt)
     job = result.scalar_one_or_none()
@@ -175,12 +179,14 @@ async def public_get_application_status(
     Get application status for candidate by email or application_id — no auth required.
     Used by VidyamargAI to display candidate application status in real-time.
     """
-    from sqlalchemy import select
+    from sqlalchemy import select, text
     from app.models.application import Application
     from app.models.job import Job
     import uuid as _uuid
 
     t_uuid = _uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     stmt = select(Application, Job.title.label("job_title")).join(Job, Application.job_id == Job.id).where(Application.tenant_id == t_uuid)
     
     if application_id:
