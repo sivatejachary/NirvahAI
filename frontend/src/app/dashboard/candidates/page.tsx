@@ -82,6 +82,7 @@ export default function CandidatesDashboardPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setErrorMsg('');
     const headers = getHeaders();
     try {
       const [appRes, jobsRes] = await Promise.all([
@@ -90,7 +91,12 @@ export default function CandidatesDashboardPage() {
       ]);
       let appsData: Application[] = [];
       let jobsData: Job[] = [];
-      if (appRes.ok) appsData = await appRes.json();
+      if (appRes.ok) {
+        appsData = await appRes.json();
+      } else {
+        const errBody = await appRes.json().catch(() => ({}));
+        setErrorMsg(`Failed to load candidates (${appRes.status}): ${errBody.detail || appRes.statusText}`);
+      }
       if (jobsRes.ok) { jobsData = await jobsRes.json(); setJobs(jobsData); }
       const mappedApps = appsData.map(app => ({
         ...app,
@@ -99,7 +105,7 @@ export default function CandidatesDashboardPage() {
       mappedApps.sort((a, b) => b.fit_score - a.fit_score);
       setApplications(mappedApps);
     } catch (err) {
-      setErrorMsg('Failed to load candidates.');
+      setErrorMsg('Connection error — make sure the HR Agent backend is running.');
     } finally {
       setLoading(false);
     }

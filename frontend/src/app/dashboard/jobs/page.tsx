@@ -18,6 +18,16 @@ interface Department {
   name: string;
 }
 
+interface Applicant {
+  id: string;
+  candidate_name: string;
+  candidate_email: string;
+  status: string;
+  fit_score: number;
+  created_at: string;
+  screening_feedback?: string;
+}
+
 export default function JobsDashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -39,6 +49,12 @@ export default function JobsDashboardPage() {
   const [newDeptId, setNewDeptId] = useState('');
   const [saving, setSaving] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Applicants modal
+  const [viewApplicantsJobId, setViewApplicantsJobId] = useState<string | null>(null);
+  const [viewApplicantsJobTitle, setViewApplicantsJobTitle] = useState('');
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
 
   // Publish inputs
   const [publishingJobId, setPublishingJobId] = useState<string | null>(null);
@@ -397,16 +413,32 @@ export default function JobsDashboardPage() {
                     onClick={() => setPublishingJobId(job.id)} 
                     className="button button-primary"
                   >
-                    ðŸš€ Distribute Channels
+                    🚀 Distribute Channels
                   </button>
                 )}
                 {job.status === 'PUBLISHED' && (
-                  <button 
-                    onClick={() => alert('Candidates are actively applying to this job. The system gathers demographics Disparate Impact statistics dynamically.')} 
+                  <button
+                    onClick={async () => {
+                      setViewApplicantsJobId(job.id);
+                      setViewApplicantsJobTitle(job.title);
+                      setApplicants([]);
+                      setApplicantsLoading(true);
+                      try {
+                        const res = await fetch(
+                          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications?job_id=${job.id}`,
+                          { headers: getHeaders() }
+                        );
+                        if (res.ok) {
+                          const data = await res.json();
+                          setApplicants(data);
+                        }
+                      } catch { /* ignore */ }
+                      finally { setApplicantsLoading(false); }
+                    }}
                     className="button"
                     style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
                   >
-                    ðŸ“Š View Applicant Ratios
+                    👥 View Applicants
                   </button>
                 )}
               </div>
@@ -523,6 +555,61 @@ export default function JobsDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. View Applicants Modal */}
+      {viewApplicantsJobId && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: 680, maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0 }}>👥 Applicants</h2>
+                <p style={{ margin: 0, fontSize: 13, opacity: 0.6 }}>{viewApplicantsJobTitle}</p>
+              </div>
+              <button onClick={() => { setViewApplicantsJobId(null); setApplicants([]); }} className="button" style={{ padding: '4px 12px' }}>✕ Close</button>
+            </div>
+
+            {applicantsLoading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Loading applicants...</div>
+            ) : applicants.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                <p>No applicants yet for this job.</p>
+                <p style={{ fontSize: 12, opacity: 0.6 }}>Applications submitted from VidyamargAI will appear here automatically.</p>
+              </div>
+            ) : (
+              <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 12, opacity: 0.6 }}>{applicants.length} candidate{applicants.length !== 1 ? 's' : ''} applied</p>
+                {applicants.map(app => {
+                  const score = Math.round(app.fit_score);
+                  const scoreColor = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+                  return (
+                    <div key={app.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#a5b4fc', flexShrink: 0 }}>
+                        {app.candidate_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{app.candidate_name}</p>
+                        <p style={{ margin: 0, fontSize: 12, opacity: 0.6 }}>{app.candidate_email}</p>
+                        {app.screening_feedback && <p style={{ margin: '4px 0 0', fontSize: 11, opacity: 0.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{app.screening_feedback}</p>}
+                      </div>
+                      <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: scoreColor }}>{score}%</div>
+                        <div style={{ fontSize: 10, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1 }}>AI Fit</div>
+                      </div>
+                      <div style={{ flexShrink: 0 }}>
+                        <span className="badge" style={{ background: app.status === 'REJECTED' ? 'rgba(239,68,68,0.15)' : app.status === 'COMPLETED' ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)', color: app.status === 'REJECTED' ? '#f87171' : app.status === 'COMPLETED' ? '#34d399' : '#a5b4fc', border: `1px solid ${app.status === 'REJECTED' ? 'rgba(239,68,68,0.3)' : app.status === 'COMPLETED' ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.3)'}`, fontSize: 10 }}>
+                          {app.status.replace('_STAGE', '')}
+                        </span>
+                        <div style={{ fontSize: 10, opacity: 0.4, marginTop: 3, textAlign: 'center' }}>{new Date(app.created_at).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
