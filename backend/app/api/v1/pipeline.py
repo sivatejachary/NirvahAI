@@ -64,7 +64,7 @@ async def get_application_pipeline(db: DBSession, tenant_id: TenantId, applicati
             "recruiter_feedback": s.recruiter_feedback,
             "ai_evaluated": s.ai_evaluated,
             "manually_overridden": s.manually_overridden,
-            "metadata": s.metadata or {},
+            "metadata": s.stage_metadata or {},
         }
         for s in stages
     ]
@@ -242,9 +242,9 @@ async def confirm_interview_attendance(
     if not stage:
         raise HTTPException(status_code=404, detail="Stage not found.")
         
-    meta = stage.metadata or {}
+    meta = stage.stage_metadata or {}
     meta["candidate_confirmed"] = confirm
-    stage.metadata = meta
+    stage.stage_metadata = meta
     await db.commit()
     return {"success": True, "confirmed": confirm}
 

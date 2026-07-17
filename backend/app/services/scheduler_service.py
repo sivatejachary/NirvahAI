@@ -78,7 +78,7 @@ class SchedulerService:
             stage.scheduled_at = datetime.fromisoformat(selected_slot)
             
             # Enrich metadata
-            meta = stage.metadata or {}
+            meta = stage.stage_metadata or {}
             meta.update({
                 "interview_type": interview_type,
                 "meeting_url": meeting_url,
@@ -87,7 +87,7 @@ class SchedulerService:
                 "interviewer_panel": ["Sarah Connor (Lead Tech)", "James Smith (Hiring Manager)"],
                 "candidate_confirmed": True
             })
-            stage.metadata = meta
+            stage.stage_metadata = meta
             await db.flush()
             
         # 4. Trigger Multi-channel notifications

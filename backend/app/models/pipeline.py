@@ -57,7 +57,7 @@ class ApplicationStage(Base, TenantMixin):
     feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ai_recommendation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     recruiter_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
+    stage_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, default=dict)
     ai_evaluated: Mapped[bool] = mapped_column(Boolean, default=False)
     manually_overridden: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(

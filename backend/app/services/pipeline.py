@@ -184,7 +184,7 @@ class PipelineService:
         if not stage:
             return None
             
-        meta = stage.metadata or {}
+        meta = stage.stage_metadata or {}
         pass_mark = meta.get("pass_mark", 50.0)
         threshold = meta.get("ai_confidence_threshold", 0.75)
         require_human_approval = meta.get("require_human_approval", False)
