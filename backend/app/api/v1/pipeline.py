@@ -196,3 +196,55 @@ async def evaluate_candidate_stage(
         
     await db.commit()
     return {"success": True, "status": stage.status, "feedback": stage.feedback}
+
+
+class ScheduleInterviewRequest(BaseModel):
+    preferred_slots: List[str]
+    interview_type: Optional[str] = "ONLINE"
+
+
+@router.post("/applications/{application_id}/stages/{stage_number}/schedule-interview",
+             dependencies=[Depends(require_role("tenant_admin", "hr_manager", "hr_recruiter"))])
+async def schedule_interview_slot(
+    application_id: str, stage_number: int, body: ScheduleInterviewRequest,
+    db: DBSession, tenant_id: TenantId
+):
+    from app.services.scheduler_service import SchedulerService
+    try:
+        result = await SchedulerService.match_slots_and_schedule(
+            db=db,
+            tenant_id=tenant_id,
+            application_id=application_id,
+            stage_number=stage_number,
+            preferred_slots=body.preferred_slots,
+            interview_type=body.interview_type
+        )
+        await db.commit()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/applications/{application_id}/stages/{stage_number}/confirm-interview")
+async def confirm_interview_attendance(
+    application_id: str, stage_number: int, confirm: bool,
+    db: DBSession, tenant_id: TenantId
+):
+    t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    a_uuid = uuid.UUID(application_id) if isinstance(application_id, str) else application_id
+    
+    stmt = select(ApplicationStage).where(
+        ApplicationStage.tenant_id == t_uuid,
+        ApplicationStage.application_id == a_uuid,
+        ApplicationStage.stage_number == stage_number
+    )
+    stage = (await db.execute(stmt)).scalar_one_or_none()
+    if not stage:
+        raise HTTPException(status_code=404, detail="Stage not found.")
+        
+    meta = stage.metadata or {}
+    meta["candidate_confirmed"] = confirm
+    stage.metadata = meta
+    await db.commit()
+    return {"success": True, "confirmed": confirm}
+
