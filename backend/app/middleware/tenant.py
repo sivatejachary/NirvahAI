@@ -33,12 +33,9 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     """
     Extracts tenant_id from JWT Bearer token and stores it in request.state.
     The tenant_id is later used by database sessions and agents.
-    
-    If tenant_id is missing on a protected route, execution is STOPPED
-    and a security event is created.
     """
 
-        # Allow public paths, but resolve tenant_id from slug header or JWT token
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.url.path == "/health":
             return await call_next(request)
 
