@@ -160,4 +160,16 @@ class ApplicationService:
             application_id=str(application.id)
         )
         
+        # 9. Create VidyamargaiSync entry for the candidate apply link
+        from app.models.vidyamarg import VidyamargaiSync
+        sync_entry = VidyamargaiSync(
+            tenant_id=t_uuid,
+            application_id=application.id,
+            job_id=j_uuid,
+            vidyamargai_candidate_id=str(candidate_uuid),
+            sync_status="ACTIVE"
+        )
+        db.add(sync_entry)
+        await db.flush()
+        
         return application

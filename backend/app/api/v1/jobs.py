@@ -146,3 +146,19 @@ async def publish_job(
         return job
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/{job_id}", dependencies=[Depends(require_role("tenant_admin", "hr_manager"))])
+async def delete_job(
+    db: DBSession,
+    tenant_id: TenantId,
+    user_id: CurrentUserId,
+    job_id: str
+):
+    try:
+        success = await JobService.delete_job_posting(db, tenant_id, job_id, user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Job posting not found.")
+        return {"status": "success", "message": "Job deleted and sync request sent to VidyaMarg AI."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

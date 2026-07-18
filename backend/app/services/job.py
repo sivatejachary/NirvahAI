@@ -189,3 +189,42 @@ class JobService:
             reason_summary=f"Job {job.title} published to channels: {', '.join(channels)}"
         )
         return job
+
+    @classmethod
+    async def delete_job_posting(
+        cls,
+        db: AsyncSession,
+        tenant_id: str,
+        job_id: str,
+        user_id: str
+    ) -> bool:
+        job = await cls.get_job(db, tenant_id, job_id)
+        if not job:
+            return False
+            
+        await db.delete(job)
+        await db.flush()
+        
+        audit = AuditService(db)
+        await audit.log(
+            tenant_id=tenant_id,
+            action="job.deleted",
+            actor_type="user",
+            actor_id=user_id,
+            entity_type="job",
+            entity_id=job_id,
+            reason_code="JOB_DELETION",
+            reason_summary=f"Job posting deleted: {job_id}"
+        )
+        
+        import httpx
+        from app.services.pipeline import VIDYAMARGAI_SYNC_URL
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.delete(
+                    f"{VIDYAMARGAI_SYNC_URL}/sync/jobs/{job_id}"
+                )
+        except Exception as e:
+            logger.warning("VIDYAMARGAI_JOB_SYNC_DELETE_FAILED", error=str(e))
+            
+        return True

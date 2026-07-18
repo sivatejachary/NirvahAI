@@ -16,7 +16,7 @@ from app.models import (
     workflow, job, application, assessment, challenge,
     interview, hackathon, recruiter_call, scheduler,
     bgv, meeting, hr_chat, offboarding, onboarding,
-    offer, performance, selection, warning_letter
+    offer, performance, selection, warning_letter, vidyamarg
 )
 
 # Permissions list

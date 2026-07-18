@@ -198,6 +198,28 @@ export default function JobsDashboardPage() {
     }
   };
 
+  const handleDeleteJob = async (jobId: string) => {
+    if (!window.confirm('Are you sure you want to delete this job posting? This will also remove it from VidyaMarg AI.')) return;
+    setError('');
+    setSuccess('');
+    try {
+      const headers = getHeaders();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${jobId}`, {
+        method: 'DELETE',
+        headers
+      });
+      if (res.ok) {
+        setSuccess('Job posting deleted and sync request sent to VidyaMarg AI.');
+        await loadData();
+      } else {
+        const data = await res.json();
+        setError(data.detail || 'Failed to delete job posting.');
+      }
+    } catch {
+      setError('Connection error.');
+    }
+  };
+
   const handleApproveJob = async (jobId: string) => {
     setError('');
     setSuccess('');
@@ -397,6 +419,9 @@ export default function JobsDashboardPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
+                    <button onClick={() => handleDeleteJob(job.id)} className="btn btn-danger btn-sm">
+                      🗑️ Delete
+                    </button>
                     {job.status === 'DRAFT' && (
                       <button onClick={() => handleApproveJob(job.id)} className="btn btn-secondary btn-sm">
                         ✔ Approve JD

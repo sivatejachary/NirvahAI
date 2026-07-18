@@ -117,6 +117,7 @@ async def init_db() -> None:
                 await session.commit()
     else:
         async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text("SELECT 1"))
     logger.info("Database connection verified")
 
