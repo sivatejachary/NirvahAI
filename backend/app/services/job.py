@@ -182,7 +182,7 @@ class JobService:
         from app.services.integration_event import EventBusService, EventCatalog
         await EventBusService.publish_event(
             event_type=EventCatalog.JOB_PUBLISHED,
-            company_id=str(tenant_id),
+            company_id=slug,
             job_id=str(job.id),
             payload={
                 "job_id": str(job.id),
@@ -224,9 +224,13 @@ class JobService:
         
         from app.services.integration_event import EventBusService, EventCatalog
         try:
+            tenant_stmt = select(Tenant).where(Tenant.id == (uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id))
+            tenant = (await db.execute(tenant_stmt)).scalar_one_or_none()
+            slug = tenant.company_slug if tenant else "dev-tenant"
+
             await EventBusService.publish_event(
                 event_type=EventCatalog.JOB_DELETED,
-                company_id=tenant_id,
+                company_id=slug,
                 job_id=str(job_id),
                 payload={"job_id": str(job_id)}
             )
