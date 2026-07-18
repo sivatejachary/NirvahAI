@@ -28,17 +28,26 @@ async def lifespan(app: FastAPI):
     logger.info("Starting HR OS API", version="1.0.0", env=settings.APP_ENV)
     
     # Initialize database connection pool
-    await init_db()
-    logger.info("Database pool initialized")
+    try:
+        await init_db()
+        logger.info("Database pool initialized")
+    except Exception as e:
+        logger.error(f"Non-fatal init_db startup exception: {e}")
 
     # Initialize Redis connection
-    await init_redis()
-    logger.info("Redis connection initialized")
+    try:
+        await init_redis()
+        logger.info("Redis connection initialized")
+    except Exception as e:
+        logger.error(f"Non-fatal init_redis startup exception: {e}")
 
     yield
 
     # Cleanup
-    await close_redis()
+    try:
+        await close_redis()
+    except Exception:
+        pass
     logger.info("HR OS API shutting down")
 
 
