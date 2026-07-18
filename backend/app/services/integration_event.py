@@ -115,7 +115,7 @@ class EventBusService:
             job_id=job_id,
             application_id=application_id
         )
-        payload_str = json.dumps(envelope)
+        payload_str = json.dumps(envelope, separators=(',', ':'))
         signature = compute_hmac_signature(payload_str)
 
         logger.info(
@@ -195,10 +195,11 @@ class EventBusService:
 
         for attempt in range(1, max_retries + 1):
             try:
+                payload_str = json.dumps(envelope, separators=(',', ':'))
                 async with httpx.AsyncClient(timeout=6.0) as client:
                     response = await client.post(
                         INTEGRATION_SERVICE_URL,
-                        json=envelope,
+                        content=payload_str,
                         headers=headers
                     )
                     if response.status_code in (200, 201, 202):
