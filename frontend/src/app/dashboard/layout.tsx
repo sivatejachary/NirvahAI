@@ -19,6 +19,7 @@ const SIDEBAR_STRUCTURE: SidebarItem[] = [
   { href: '/dashboard/calls', label: 'HR Voice', emoji: '🎙️' },
   { href: '/dashboard/analytics', label: 'Reports & Analytics', emoji: '📊' },
   { href: '/dashboard/settings', label: 'Company Settings', emoji: '🏢' },
+  { href: '/dashboard/super-admin', label: 'Super Admin', emoji: '👑' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

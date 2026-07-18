@@ -143,3 +143,75 @@ async def activate_kill_switch(
     )
 
     return {"message": f"Kill switch '{switch}' activated.", "switch": switch, "active": True}
+
+
+# ── Super Admin / Platform Admin Endpoints ─────────────────────────────────────
+
+class TenantStatusUpdate(BaseModel):
+    status: Optional[str] = None  # active | pending_setup | suspended | inactive
+    plan: Optional[str] = None    # trial | growth | enterprise
+
+
+@router.get("/all", dependencies=[Depends(require_role("platform_admin"))])
+async def list_all_tenants(db: DBSession):
+    """
+    Super Admin endpoint to view all registered enterprise company tenants across the platform.
+    """
+    stmt = select(Tenant).order_by(Tenant.created_at.desc())
+    result = await db.execute(stmt)
+    tenants = result.scalars().all()
+    return [
+        {
+            "id": str(t.id),
+            "company_name": t.company_name,
+            "company_slug": t.company_slug,
+            "legal_name": getattr(t, "legal_name", None),
+            "industry": getattr(t, "industry", None),
+            "company_size": getattr(t, "company_size", None),
+            "status": t.status,
+            "plan": t.plan,
+            "is_sandbox": t.is_sandbox,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        }
+        for t in tenants
+    ]
+
+
+@router.patch("/{tenant_id}/status", dependencies=[Depends(require_role("platform_admin"))])
+async def update_tenant_status(
+    tenant_id: str,
+    body: TenantStatusUpdate,
+    user_id: CurrentUserId,
+    db: DBSession,
+):
+    """
+    Super Admin endpoint to approve, suspend, or change subscription plan of a tenant.
+    """
+    import uuid
+    t_uuid = uuid.UUID(tenant_id)
+    stmt = select(Tenant).where(Tenant.id == t_uuid)
+    tenant = (await db.execute(stmt)).scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found.")
+
+    if body.status:
+        tenant.status = body.status
+    if body.plan:
+        tenant.plan = body.plan
+
+    await db.flush()
+
+    audit = AuditService(db)
+    await audit.log(
+        action="tenant.status_updated",
+        actor_type="user",
+        actor_id=user_id,
+        tenant_id=tenant_id,
+        entity_type="tenant",
+        entity_id=tenant_id,
+        reason_code="SUPER_ADMIN_TENANT_UPDATE",
+        output_summary={"new_status": tenant.status, "new_plan": tenant.plan},
+    )
+
+    return {"message": "Tenant updated successfully.", "id": str(tenant.id), "status": tenant.status, "plan": tenant.plan}
+

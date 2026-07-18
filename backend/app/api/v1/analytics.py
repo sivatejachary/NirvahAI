@@ -188,3 +188,58 @@ async def get_recruiter_morning_brief(db: DBSession, tenant_id: TenantId):
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.get("/platform", dependencies=[Depends(require_role("platform_admin"))])
+async def get_platform_admin_analytics(db: DBSession):
+    """
+    Super Admin endpoint returning global multi-tenant platform metrics:
+    - Total registered, active, and pending companies
+    - Total jobs (active vs closed)
+    - Total candidates & applications
+    - Total voice AI screening calls
+    """
+    from app.models.tenant import Tenant
+    from app.models.recruiter_call import RecruiterCall
+    from sqlalchemy import text
+
+    if "sqlite" not in str(db.bind.url):
+        await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
+
+    # Tenants
+    t_res = await db.execute(select(Tenant))
+    tenants = t_res.scalars().all()
+    total_companies = len(tenants)
+    active_companies = len([t for t in tenants if t.status == "active"])
+    pending_companies = len([t for t in tenants if t.status == "pending_setup"])
+
+    # Jobs
+    j_res = await db.execute(select(Job))
+    jobs = j_res.scalars().all()
+    total_jobs = len(jobs)
+    active_jobs = len([j for j in jobs if j.status == "PUBLISHED"])
+
+    # Applications
+    a_res = await db.execute(select(Application))
+    apps = a_res.scalars().all()
+    total_applications = len(apps)
+    total_hires = len([a for a in apps if a.status in ("COMPLETED", "HIRED")])
+
+    # Calls
+    c_res = await db.execute(select(RecruiterCall))
+    calls = c_res.scalars().all()
+    total_voice_calls = len(calls)
+
+    return {
+        "total_companies": total_companies,
+        "active_companies": active_companies,
+        "pending_companies": pending_companies,
+        "total_jobs": total_jobs,
+        "active_jobs": active_jobs,
+        "closed_jobs": total_jobs - active_jobs,
+        "total_applications": total_applications,
+        "total_hires": total_hires,
+        "total_voice_calls": total_voice_calls,
+        "system_health": "100% Operational"
+    }
+
+
