@@ -77,7 +77,18 @@ async def create_job(
             requirements=body.requirements,
             created_by=user_id
         )
-        return job
+        return {
+            "id": str(job.id),
+            "tenant_id": str(job.tenant_id),
+            "title": job.title,
+            "description": job.description,
+            "department_id": str(job.department_id),
+            "requirements": job.requirements,
+            "status": job.status,
+            "sourcing_channels": job.sourcing_channels,
+            "employment_type": job.employment_type,
+            "location_type": job.location_type,
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -143,7 +154,17 @@ async def publish_job(
         )
         if not job:
             raise HTTPException(status_code=404, detail="Job posting not found.")
-        return job
+        return {
+            "id": str(job.id),
+            "tenant_id": str(job.tenant_id),
+            "title": job.title,
+            "description": job.description,
+            "status": job.status,
+            "sourcing_channels": job.sourcing_channels,
+            "requirements": job.requirements,
+            "employment_type": job.employment_type,
+            "location_type": job.location_type,
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
