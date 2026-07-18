@@ -93,10 +93,16 @@ def compute_hmac_signature(payload_json: str, secret: str = INTEGRATION_SECRET) 
 class EventBusService:
     """
     Integration Service Event Bus Dispatcher.
-    Publishes events to background worker queue (Redis Streams / Async Queue)
-    and dispatches signed payloads to external integration endpoints.
-    If VidyaMarg or external consumers are temporarily down, events wait in queue & retry automatically.
+    Publishes events to a Redis-backed durable event queue
+    and processes them asynchronously via a persistent background worker loop.
+    If VidyaMarg is down, events wait in the queue and retry automatically.
     """
+    _worker_task: Optional[asyncio.Task] = None
+
+    @classmethod
+    def ensure_worker_running(cls):
+        if cls._worker_task is None or cls._worker_task.done():
+            cls._worker_task = asyncio.create_task(cls.start_worker_loop())
 
     @classmethod
     async def publish_event(
@@ -124,12 +130,54 @@ class EventBusService:
             company_id=company_id
         )
 
-        # Dispatch asynchronously in background (Non-blocking queue execution)
-        asyncio.create_task(
-            cls._deliver_event_with_retry(envelope, signature)
-        )
+        # Durably enqueue the event in Redis
+        try:
+            from app.core.redis import get_redis
+            redis = get_redis()
+            event_data = {
+                "envelope": envelope,
+                "signature": signature,
+                "retry_count": 0
+            }
+            await redis.rpush("integration:events_queue", json.dumps(event_data))
+        except Exception as e:
+            logger.error(f"Failed to durably enqueue event in Redis: {e}. Falling back to in-memory dispatch.")
+            asyncio.create_task(cls._deliver_event_with_retry(envelope, signature))
+
+        # Ensure background processing loop is active
+        cls.ensure_worker_running()
 
         return envelope
+
+    @classmethod
+    async def start_worker_loop(cls):
+        logger.info("Starting integration event bus background worker loop...")
+        while True:
+            try:
+                from app.core.redis import get_redis
+                redis = get_redis()
+                event_data_str = await redis.lpop("integration:events_queue")
+                if event_data_str:
+                    event_data = json.loads(event_data_str)
+                    envelope = event_data["envelope"]
+                    signature = event_data["signature"]
+                    
+                    delivered = await cls._deliver_event_with_retry(envelope, signature)
+                    if not delivered:
+                        # Re-enqueue to queue tail with exponential delay backoff to avoid hot loops
+                        retry_count = event_data.get("retry_count", 0) + 1
+                        if retry_count > 5:
+                            logger.error("EVENT_DELIVERY_PERMANENT_FAILURE", event_id=envelope["event_id"])
+                            await redis.rpush("integration:events_dlq", event_data_str)
+                        else:
+                            event_data["retry_count"] = retry_count
+                            await asyncio.sleep(5) # Delay recheck
+                            await redis.rpush("integration:events_queue", json.dumps(event_data))
+                else:
+                    await asyncio.sleep(2)
+            except Exception as e:
+                logger.error(f"Error in integration event bus worker loop: {e}")
+                await asyncio.sleep(5)
 
     @classmethod
     async def _deliver_event_with_retry(
@@ -137,11 +185,11 @@ class EventBusService:
         envelope: Dict[str, Any],
         signature: str,
         max_retries: int = 3
-    ):
+    ) -> bool:
         """
         Integration Service delivery worker:
         Performs signed HTTP POST to Integration Service / VidyaMarg event receiver.
-        Retries automatically on network or HTTP failure so zero events are lost if consumer is temporarily down.
+        Returns True if successful, False on permanent failure.
         """
         headers = {
             "Content-Type": "application/json",
@@ -165,7 +213,7 @@ class EventBusService:
                             attempt=attempt,
                             status=response.status_code
                         )
-                        return
+                        return True
                     else:
                         logger.warning(
                             "EVENT_DELIVERY_HTTP_ERROR",
@@ -181,7 +229,6 @@ class EventBusService:
                     error=str(e)
                 )
 
-            # Exponential backoff retry (1s, 2s, 4s...)
             if attempt < max_retries:
                 await asyncio.sleep(2 ** (attempt - 1))
 
@@ -190,3 +237,4 @@ class EventBusService:
             event_id=envelope["event_id"],
             event_type=envelope["event_type"]
         )
+        return False

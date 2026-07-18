@@ -38,6 +38,9 @@ async def lifespan(app: FastAPI):
     try:
         await init_redis()
         logger.info("Redis connection initialized")
+        # Start integration event bus background worker loop durably
+        from app.services.integration_event import EventBusService
+        EventBusService.ensure_worker_running()
     except Exception as e:
         logger.error(f"Non-fatal init_redis startup exception: {e}")
 

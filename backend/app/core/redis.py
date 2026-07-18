@@ -49,6 +49,19 @@ class MockRedis:
     async def exists(self, key, *args, **kwargs):
         return key in self._data
 
+    async def rpush(self, key, value, *args, **kwargs):
+        if key not in self._data:
+            self._data[key] = []
+        if not isinstance(self._data[key], list):
+            self._data[key] = [self._data[key]]
+        self._data[key].append(value)
+        return len(self._data[key])
+
+    async def lpop(self, key, *args, **kwargs):
+        if key in self._data and isinstance(self._data[key], list) and len(self._data[key]) > 0:
+            return self._data[key].pop(0)
+        return None
+
 
 async def init_redis() -> None:
     global _redis_client
