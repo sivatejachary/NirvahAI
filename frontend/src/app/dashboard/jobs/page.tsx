@@ -68,6 +68,8 @@ export default function JobsDashboardPage() {
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['linkedin', 'indeed']);
   const [publishing, setPublishing] = useState(false);
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://nirvahai-production.up.railway.app';
+
   const getHeaders = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -77,12 +79,15 @@ export default function JobsDashboardPage() {
     const headers = getHeaders();
     try {
       const [jobsRes, deptsRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, { headers }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/departments`, { headers }),
+        fetch(`${API_BASE}/api/v1/jobs`, { headers }),
+        fetch(`${API_BASE}/api/v1/company/departments`, { headers }),
       ]);
       
       if (jobsRes.ok) {
         setJobs(await jobsRes.json());
+      } else {
+        const errData = await jobsRes.json().catch(() => ({}));
+        setError(`Failed to load jobs (${jobsRes.status}): ${errData.detail || jobsRes.statusText}`);
       }
       if (deptsRes.ok) {
         setDepartments(await deptsRes.json());
@@ -109,7 +114,7 @@ export default function JobsDashboardPage() {
     
     try {
       const headers = getHeaders();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/generate`, {
+      const res = await fetch(`${API_BASE}/api/v1/jobs/generate`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -158,7 +163,7 @@ export default function JobsDashboardPage() {
     
     try {
       const headers = getHeaders();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, {
+      const res = await fetch(`${API_BASE}/api/v1/jobs`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -204,7 +209,7 @@ export default function JobsDashboardPage() {
     setSuccess('');
     try {
       const headers = getHeaders();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${jobId}`, {
+      const res = await fetch(`${API_BASE}/api/v1/jobs/${jobId}`, {
         method: 'DELETE',
         headers
       });
@@ -225,7 +230,7 @@ export default function JobsDashboardPage() {
     setSuccess('');
     try {
       const headers = getHeaders();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${jobId}/approve`, {
+      const res = await fetch(`${API_BASE}/api/v1/jobs/${jobId}/approve`, {
         method: 'POST',
         headers
       });
@@ -250,7 +255,7 @@ export default function JobsDashboardPage() {
     
     try {
       const headers = getHeaders();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${publishingJobId}/publish`, {
+      const res = await fetch(`${API_BASE}/api/v1/jobs/${publishingJobId}/publish`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ channels: selectedChannels })
