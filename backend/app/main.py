@@ -72,15 +72,6 @@ def create_application() -> FastAPI:
     if not settings.APP_DEBUG:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
-    # ── CORS ─────────────────────────────────────────────────────────────────
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     app.add_middleware(RateLimitMiddleware)
 
@@ -89,6 +80,15 @@ def create_application() -> FastAPI:
 
     # ── Tenant Context Resolution ─────────────────────────────────────────────
     app.add_middleware(TenantContextMiddleware)
+
+    # ── CORS (Outer Layer) ───────────────────────────────────────────────────
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # ── Routers ───────────────────────────────────────────────────────────────
     app.include_router(api_v1_router, prefix="/api/v1")
