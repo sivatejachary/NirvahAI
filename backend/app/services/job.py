@@ -154,8 +154,8 @@ class JobService:
         if not job:
             return None
             
-        if job.status != "APPROVED":
-            raise ValueError("Job must be approved by legal or admin before publishing.")
+        if job.status not in ("APPROVED", "DRAFT"):
+            raise ValueError("Job must be in DRAFT or APPROVED status before publishing.")
             
         # Get tenant slug for referral URLs
         tenant_stmt = select(Tenant).where(Tenant.id == job.tenant_id)
