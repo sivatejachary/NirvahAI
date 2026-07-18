@@ -43,23 +43,30 @@ class Settings(BaseSettings):
             "https://nirvah-ai-ruby.vercel.app",
             "https://nirvahai-production.up.railway.app",
         ]
+        origins = []
         if v is None or v == "":
-            return _defaults
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
+            origins = _defaults
+        elif isinstance(v, list):
+            origins = v
+        elif isinstance(v, str):
             v = v.strip()
             if not v:
-                return _defaults
-            # Try JSON array first
-            if v.startswith("["):
+                origins = _defaults
+            elif v.startswith("["):
                 try:
-                    return json.loads(v)
+                    origins = json.loads(v)
                 except json.JSONDecodeError:
-                    pass
-            # Fall back to comma-separated
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return _defaults
+                    origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+            else:
+                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+        else:
+            origins = _defaults
+
+        # Force allow frontend domains for cross-platform integration
+        for domain in ["https://vidyamarg-ai.vercel.app", "https://nirvah-ai-ruby.vercel.app"]:
+            if domain not in origins:
+                origins.append(domain)
+        return origins
 
     # ── PostgreSQL ────────────────────────────────────────────────────────────
     POSTGRES_HOST: str = "localhost"
