@@ -137,7 +137,10 @@ class User(Base, TenantMixin, TimestampMixin):
 
     @property
     def role_names(self) -> list[str]:
-        return [role.name for role in self.roles]
+        names = [role.name for role in self.roles]
+        if self.is_platform_admin and "platform_admin" not in names:
+            names.append("platform_admin")
+        return names
 
     @property
     def permission_names(self) -> list[str]:
