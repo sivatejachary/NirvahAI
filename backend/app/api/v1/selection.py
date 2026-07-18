@@ -60,6 +60,21 @@ async def schedule_round(
     # Update application status
     app.status = "INTERVIEW_STAGE"
     await db.flush()
+
+    from app.services.integration_event import EventBusService, EventCatalog
+    await EventBusService.publish_event(
+        event_type=EventCatalog.CANDIDATE_INTERVIEW_SCHEDULED,
+        company_id=tenant_id,
+        application_id=str(body.application_id),
+        payload={
+            "interview_id": str(interview.id),
+            "application_id": str(body.application_id),
+            "round_type": body.round_type,
+            "interviewer_name": body.interviewer_name,
+            "interviewer_email": body.interviewer_email,
+            "scheduled_at": body.scheduled_at.isoformat() if body.scheduled_at else None
+        }
+    )
     
     return interview
 

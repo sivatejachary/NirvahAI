@@ -114,6 +114,22 @@ async def send_offer(
     offer.status = "SENT"
     offer.sent_at = datetime.utcnow()
     await db.flush()
+
+    from app.services.integration_event import EventBusService, EventCatalog
+    await EventBusService.publish_event(
+        event_type=EventCatalog.OFFER_CREATED,
+        company_id=tenant_id,
+        application_id=str(offer.application_id),
+        payload={
+            "offer_id": str(offer.id),
+            "application_id": str(offer.application_id),
+            "candidate_name": offer.candidate_name,
+            "candidate_email": offer.candidate_email,
+            "job_title": offer.job_title,
+            "base_salary": offer.base_salary,
+            "offer_letter_text": offer.offer_letter_text
+        }
+    )
     return offer
 
 
