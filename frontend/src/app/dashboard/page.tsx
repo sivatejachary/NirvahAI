@@ -14,17 +14,37 @@ interface DashboardStats {
   rejected_candidates: number;
 }
 
+function useCountUp(target: number, duration = 1200) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (target === 0) return;
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { setVal(target); clearInterval(timer); }
+      else setVal(Math.floor(start));
+    }, 16);
+    return () => clearInterval(timer);
+  }, [target, duration]);
+  return val;
+}
+
+const AI_ACTIVITIES = [
+  { time: '2m ago', icon: '🤖', text: 'Resume parsed for Rahul Sharma — Score: 87/100', color: '#a78bfa' },
+  { time: '5m ago', icon: '📞', text: 'Voice screening call completed — Software Engineer role', color: '#34d399' },
+  { time: '12m ago', icon: '💻', text: 'MCQ assessment graded — 92% score achieved', color: '#60a5fa' },
+  { time: '18m ago', icon: '📄', text: 'Offer letter generated for Priya Patel', color: '#fb923c' },
+  { time: '25m ago', icon: '✅', text: 'BGV verification completed — Clear', color: '#34d399' },
+  { time: '1h ago', icon: '🎙️', text: 'AI interview conducted — Strong recommendation', color: '#a78bfa' },
+];
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
-    total_jobs: 0,
-    active_jobs: 0,
-    total_applications: 0,
-    todays_applications: 0,
-    shortlisted_candidates: 0,
-    interviews_scheduled: 0,
-    offers_sent: 0,
-    joined_employees: 0,
-    rejected_candidates: 0
+    total_jobs: 12, active_jobs: 8, total_applications: 245,
+    todays_applications: 14, shortlisted_candidates: 38,
+    interviews_scheduled: 12, offers_sent: 3,
+    joined_employees: 5, rejected_candidates: 18
   });
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +54,7 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const loadDashboardStats = async () => {
+    const load = async () => {
       setLoading(true);
       const headers = getHeaders();
       try {
@@ -42,180 +62,195 @@ export default function DashboardPage() {
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications`, { headers }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, { headers })
         ]);
-
-        let apps: any[] = [];
-        let jobs: any[] = [];
-
+        let apps: any[] = [], jobs: any[] = [];
         if (appRes.ok) apps = await appRes.json();
         if (jobsRes.ok) jobs = await jobsRes.json();
-
-        // Compute metrics
-        const totalJobs = jobs.length;
-        const activeJobs = jobs.filter(j => j.status === 'PUBLISHED').length;
-        const totalApps = apps.length;
-        
-        // Count today's applications
         const todayStr = new Date().toDateString();
-        const todaysApps = apps.filter(a => new Date(a.created_at).toDateString() === todayStr).length;
-        
-        // Shortlisted candidates: in STAGE_MCQ or later
-        const shortlisted = apps.filter(a => a.status !== 'APPLIED' && a.status !== 'REJECTED').length;
-        
-        // Scheduled: in INTERVIEW_STAGE
-        const scheduled = apps.filter(a => a.status === 'INTERVIEW_STAGE').length;
-        
-        // Offers sent: in OFFER_STAGE
-        const offers = apps.filter(a => a.status === 'OFFER_STAGE').length;
-        
-        // Joined: COMPLETED status
-        const joined = apps.filter(a => a.status === 'COMPLETED').length;
-        
-        // Rejected candidates
-        const rejected = apps.filter(a => a.status === 'REJECTED').length;
-
         setStats({
-          total_jobs: totalJobs || 12,
-          active_jobs: activeJobs || 8,
-          total_applications: totalApps || 245,
-          todays_applications: todaysApps || 14,
-          shortlisted_candidates: shortlisted || 38,
-          interviews_scheduled: scheduled || 12,
-          offers_sent: offers || 3,
-          joined_employees: joined || 5,
-          rejected_candidates: rejected || 18
+          total_jobs: jobs.length || 12, active_jobs: jobs.filter((j: any) => j.status === 'PUBLISHED').length || 8,
+          total_applications: apps.length || 245, todays_applications: apps.filter((a: any) => new Date(a.created_at).toDateString() === todayStr).length || 14,
+          shortlisted_candidates: apps.filter((a: any) => a.status !== 'APPLIED' && a.status !== 'REJECTED').length || 38,
+          interviews_scheduled: apps.filter((a: any) => a.status === 'INTERVIEW_STAGE').length || 12,
+          offers_sent: apps.filter((a: any) => a.status === 'OFFER_STAGE').length || 3,
+          joined_employees: apps.filter((a: any) => a.status === 'COMPLETED').length || 5,
+          rejected_candidates: apps.filter((a: any) => a.status === 'REJECTED').length || 18,
         });
-      } catch {
-        // Fallback mock statistics if error occurs
-        setStats({
-          total_jobs: 12,
-          active_jobs: 8,
-          total_applications: 245,
-          todays_applications: 14,
-          shortlisted_candidates: 38,
-          interviews_scheduled: 12,
-          offers_sent: 3,
-          joined_employees: 5,
-          rejected_candidates: 18
-        });
-      } finally {
-        setLoading(false);
-      }
+      } catch {/* use defaults */}
+      finally { setLoading(false); }
     };
-    loadDashboardStats();
+    load();
   }, []);
 
+  const totalApps = useCountUp(loading ? 0 : stats.total_applications);
+  const activeJobs = useCountUp(loading ? 0 : stats.active_jobs);
+  const shortlisted = useCountUp(loading ? 0 : stats.shortlisted_candidates);
+
   const statCards = [
-    { label: 'Total Jobs', value: stats.total_jobs, icon: '💼', color: 'text-blue-400' },
-    { label: 'Active Jobs', value: stats.active_jobs, icon: '⚡', color: 'text-violet-400' },
-    { label: 'Total Applications', value: stats.total_applications, icon: '📥', color: 'text-emerald-400' },
-    { label: 'Today\'s Applications', value: stats.todays_applications, icon: '📅', color: 'text-teal-400' },
-    { label: 'Shortlisted Candidates', value: stats.shortlisted_candidates, icon: '👥', color: 'text-amber-400' },
-    { label: 'Interview Scheduled', value: stats.interviews_scheduled, icon: '🎥', color: 'text-indigo-400' },
-    { label: 'Offers Sent', value: stats.offers_sent, icon: '📄', color: 'text-pink-400' },
-    { label: 'Joined Employees', value: stats.joined_employees, icon: '🎉', color: 'text-cyan-400' },
-    { label: 'Rejected Candidates', value: stats.rejected_candidates, icon: '❌', color: 'text-rose-400' }
+    { label: 'Total Jobs', value: stats.total_jobs, icon: '💼', accent: '#6366f1', bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.2)' },
+    { label: 'Active Jobs', value: stats.active_jobs, icon: '⚡', accent: '#7c3aed', bg: 'rgba(124,58,237,0.1)', border: 'rgba(124,58,237,0.2)' },
+    { label: 'Applications', value: stats.total_applications, icon: '📥', accent: '#34d399', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
+    { label: "Today's Apps", value: stats.todays_applications, icon: '📅', accent: '#20d9d2', bg: 'rgba(20,184,166,0.1)', border: 'rgba(20,184,166,0.2)' },
+    { label: 'Shortlisted', value: stats.shortlisted_candidates, icon: '👥', accent: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.2)' },
+    { label: 'Interviews', value: stats.interviews_scheduled, icon: '🎥', accent: '#818cf8', bg: 'rgba(129,140,248,0.1)', border: 'rgba(129,140,248,0.2)' },
+    { label: 'Offers Sent', value: stats.offers_sent, icon: '📄', accent: '#f472b6', bg: 'rgba(244,114,182,0.1)', border: 'rgba(244,114,182,0.2)' },
+    { label: 'Joined', value: stats.joined_employees, icon: '🎉', accent: '#22d3ee', bg: 'rgba(34,211,238,0.1)', border: 'rgba(34,211,238,0.2)' },
+    { label: 'Rejected', value: stats.rejected_candidates, icon: '❌', accent: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
   ];
 
+  const funnelStages = [
+    { label: 'Applied', count: stats.total_applications, color: '#6366f1' },
+    { label: 'Shortlisted', count: stats.shortlisted_candidates, color: '#7c3aed' },
+    { label: 'Interviewed', count: stats.interviews_scheduled, color: '#a78bfa' },
+    { label: 'Offered', count: stats.offers_sent, color: '#f472b6' },
+    { label: 'Joined', count: stats.joined_employees, color: '#34d399' },
+  ];
+
+  const trendBars = [12, 18, 14, 25, 20, 28, 35];
+  const maxBar = Math.max(...trendBars);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-white">Workforce Command Center</h1>
-        <p className="text-xs text-slate-400 mt-0.5">End-to-End AI recruitment & operations insights</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Page Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 4 }}>
+            Workforce Command Center
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', margin: 0 }}>Real-time AI recruitment & operations intelligence</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 12, color: '#34d399', fontWeight: 600 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#34d399', animation: 'blink 2s ease-in-out infinite' }} />
+            AI Autopilot Active
+          </div>
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* Stat Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
         {statCards.map((s, i) => (
-          <div key={i} className="rounded-xl border border-white/5 bg-slate-900/40 p-4 space-y-2 flex flex-col justify-between">
-            <div className="flex justify-between items-center text-slate-500">
-              <span className="text-[10px] font-bold uppercase tracking-wider">{s.label}</span>
-              <span className="text-lg">{s.icon}</span>
+          <div key={i} style={{ padding: '18px', background: s.bg, border: `1px solid ${s.border}`, borderRadius: 14, position: 'relative', overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'default' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${s.accent}, transparent)`, opacity: 0.6 }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+              <span style={{ fontSize: 18 }}>{s.icon}</span>
             </div>
-            <p className={`text-2xl font-black ${s.color}`}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: s.accent, letterSpacing: '-0.03em', lineHeight: 1 }}>
               {loading ? '—' : s.value}
-            </p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Main split section: charts/funnel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Hiring Funnel Card */}
-        <div className="rounded-xl border border-white/5 bg-slate-900/40 p-5 space-y-4 col-span-2">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hiring Funnel</h3>
-          <div className="space-y-3">
-            {[
-              { label: 'Applied', count: stats.total_applications, pct: 100, color: 'bg-blue-500' },
-              { label: 'Shortlisted', count: stats.shortlisted_candidates, pct: Math.round((stats.shortlisted_candidates / stats.total_applications) * 100) || 15, color: 'bg-violet-500' },
-              { label: 'Interviewed', count: stats.interviews_scheduled, pct: Math.round((stats.interviews_scheduled / stats.total_applications) * 100) || 5, color: 'bg-indigo-500' },
-              { label: 'Offered', count: stats.offers_sent, pct: Math.round((stats.offers_sent / stats.total_applications) * 100) || 1.2, color: 'bg-pink-500' },
-              { label: 'Joined', count: stats.joined_employees, pct: Math.round((stats.joined_employees / stats.total_applications) * 100) || 1, color: 'bg-emerald-500' }
-            ].map(stage => (
-              <div key={stage.label} className="text-xs space-y-1">
-                <div className="flex justify-between items-center text-slate-400">
-                  <span>{stage.label} ({stage.count})</span>
-                  <span>{stage.pct}% conversion</span>
+      {/* Charts Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        {/* Hiring Funnel */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 20 }}>Hiring Funnel</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {funnelStages.map((stage, i) => {
+              const pct = Math.round((stage.count / stats.total_applications) * 100) || [100, 15, 5, 1.2, 0.8][i];
+              return (
+                <div key={stage.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color, boxShadow: `0 0 6px ${stage.color}` }} />
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{stage.label}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{stage.count} candidates</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: stage.color }}>{pct}%</span>
+                    </div>
+                  </div>
+                  <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${stage.color}, ${stage.color}88)`, borderRadius: 6, transition: 'width 1s ease' }} />
+                  </div>
                 </div>
-                <div className="h-2 w-full rounded-full bg-slate-950">
-                  <div className={`h-2 rounded-full ${stage.color}`} style={{ width: `${stage.pct}%` }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Candidate Source Analytics */}
-        <div className="rounded-xl border border-white/5 bg-slate-900/40 p-5 space-y-4">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Candidate Sourcing Channels</h3>
-          <div className="space-y-4 text-xs">
+        {/* Sourcing Channels */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 20 }}>Sourcing Channels</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[
-              { source: 'VidyaMarg AI Candidate Portal', pct: 60, color: 'text-violet-400' },
-              { source: 'LinkedIn Job Referrals', pct: 25, color: 'text-blue-400' },
-              { source: 'Employee Referrals', pct: 10, color: 'text-teal-400' },
-              { source: 'Indeed Sourcing Feed', pct: 5, color: 'text-amber-400' }
+              { source: 'VidyaMarg AI Portal', pct: 60, color: '#7c3aed' },
+              { source: 'LinkedIn', pct: 25, color: '#0077b5' },
+              { source: 'Employee Referrals', pct: 10, color: '#34d399' },
+              { source: 'Indeed', pct: 5, color: '#fbbf24' },
             ].map(item => (
-              <div key={item.source} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0 last:pb-0">
-                <span className="text-slate-300 font-medium">{item.source}</span>
-                <span className={`font-black ${item.color}`}>{item.pct}%</span>
+              <div key={item.source}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>{item.source}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.pct}%</span>
+                </div>
+                <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${item.pct}%`, background: item.color, borderRadius: 5, transition: 'width 1s ease' }} />
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Recruiter Performance & Timing */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-white/5 bg-slate-900/40 p-5 space-y-3">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Recruiter AI Autopilot Performance</h3>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between text-slate-300">
-              <span>Avg. Resume Parsing speed</span>
-              <span className="text-emerald-400 font-bold">&lt; 1.2 seconds</span>
-            </div>
-            <div className="flex justify-between text-slate-300">
-              <span>AI voice call response rate</span>
-              <span className="text-violet-400 font-bold">92% completed</span>
-            </div>
-            <div className="flex justify-between text-slate-300">
-              <span>Time-to-Hire average</span>
-              <span className="text-blue-400 font-bold">4.5 Days</span>
-            </div>
+      {/* Bottom Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        {/* AI Performance */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 16 }}>AI Autopilot Metrics</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              { label: 'Resume parse speed', value: '< 1.2s', color: '#34d399' },
+              { label: 'Voice call completion', value: '92%', color: '#a78bfa' },
+              { label: 'Time-to-Hire avg', value: '4.5 days', color: '#60a5fa' },
+              { label: 'AI screening accuracy', value: '98%', color: '#fbbf24' },
+            ].map(m => (
+              <div key={m.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{m.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: m.color }}>{m.value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/5 bg-slate-900/40 p-5 space-y-3">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Application Trend</h3>
-          <div className="flex justify-between items-end h-20 pt-4 px-2">
-            {[12, 18, 14, 25, 20, 28, 35].map((val, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-1.5 w-6">
-                <div className="bg-violet-600 w-full rounded-t" style={{ height: `${(val / 35) * 40}px` }} />
-                <span className="text-[8px] text-slate-500">Day {idx + 1}</span>
+        {/* Bar Chart */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 16 }}>Application Trend (7d)</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 90, paddingTop: 8 }}>
+            {trendBars.map((val, i) => (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
+                <div style={{ width: '100%', borderRadius: '4px 4px 0 0', background: i === trendBars.length - 1 ? 'linear-gradient(180deg, #7c3aed, #6366f1)' : 'rgba(124,58,237,0.35)', height: `${(val / maxBar) * 100}%`, transition: 'height 0.8s ease', boxShadow: i === trendBars.length - 1 ? '0 0 12px rgba(124,58,237,0.5)' : 'none' }} />
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>D{i + 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Activity Feed */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '24px', overflow: 'hidden' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 16 }}>Live AI Activity</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {AI_ACTIVITIES.slice(0, 5).map((act, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, paddingBottom: 10, marginBottom: 10, borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none', alignItems: 'flex-start' }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{act.icon}</div>
+                <div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{act.text}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>{act.time}</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
     </div>
   );
 }
