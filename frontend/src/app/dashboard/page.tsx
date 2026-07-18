@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface DashboardStats {
   total_jobs: number;
@@ -18,6 +19,7 @@ interface DashboardStats {
 
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     total_jobs: 0, active_jobs: 0, total_applications: 0,
     todays_applications: 0, shortlisted_candidates: 0,
@@ -33,6 +35,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const load = async () => {
+      if (typeof window !== 'undefined') {
+        const roles = localStorage.getItem('roles');
+        if (roles) {
+          const parsed = JSON.parse(roles);
+          if (parsed.includes('platform_admin')) {
+            router.push('/dashboard/super-admin');
+            return;
+          }
+        }
+      }
       setLoading(true);
       const headers = getHeaders();
       try {

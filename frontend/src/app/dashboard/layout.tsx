@@ -27,6 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [companyName, setCompanyName] = useState('Loading...');
   const [userInitials, setUserInitials] = useState('U');
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [userRole, setUserRole] = useState('');
   const [collapsed, setCollapsed] = useState(false);
 
@@ -42,6 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (roles) {
           const r = JSON.parse(roles);
           setUserRole(r[0]?.replace(/_/g, ' ') || '');
+          setIsPlatformAdmin(r.includes('platform_admin'));
         }
       } catch { /* ignore */ }
       const tenantId = localStorage.getItem('tenant_id');
@@ -87,7 +89,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Navigation */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingBottom: 8 }}>
-          {SIDEBAR_STRUCTURE.map((item, idx) => {
+          {SIDEBAR_STRUCTURE.filter(item => {
+            if (isPlatformAdmin) {
+              return item.href === '/dashboard' || item.href === '/dashboard/super-admin';
+            } else {
+              return item.href !== '/dashboard/super-admin';
+            }
+          }).map((item, idx) => {
             const active = isActive(item.href, item.exact);
             return (
               <Link key={idx} href={item.href}
