@@ -6,10 +6,12 @@ interface TenantItem {
   id: string;
   company_name: string;
   company_slug: string;
+  legal_name?: string;
   industry?: string;
   company_size?: string;
   status: string;
   plan: string;
+  is_sandbox?: boolean;
   created_at?: string;
 }
 
