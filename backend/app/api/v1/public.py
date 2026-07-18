@@ -650,13 +650,46 @@ async def public_submit_proctor_log(
 
 
 @router.get("/redis-check", dependencies=[])
-async def check_redis_integration_state():
+async def check_redis_integration_state(action: Optional[str] = None):
     try:
         from app.core.redis import get_redis
         import json
         redis = get_redis()
         is_mock = "MockRedis" in str(type(redis))
         
+        re_enqueued = 0
+        if action == "retry":
+            if is_mock:
+                data = getattr(redis, "_data", {})
+                dlq = data.get("integration:events_dlq", [])
+                queue = data.setdefault("integration:events_queue", [])
+                for item in dlq:
+                    try:
+                        event_data = json.loads(item)
+                        event_data["retry_count"] = 0
+                        queue.append(json.dumps(event_data))
+                        re_enqueued += 1
+                    except Exception:
+                        pass
+                data["integration:events_dlq"] = []
+            else:
+                dlq_len = await redis.llen("integration:events_dlq")
+                for _ in range(dlq_len):
+                    item = await redis.lpop("integration:events_dlq")
+                    if item:
+                        try:
+                            # If it was returned as bytes, decode it
+                            if isinstance(item, bytes):
+                                item = item.decode("utf-8")
+                            event_data = json.loads(item)
+                            event_data["retry_count"] = 0
+                            await redis.rpush("integration:events_queue", json.dumps(event_data))
+                            re_enqueued += 1
+                        except Exception:
+                            # Fallback re-enqueue raw
+                            await redis.rpush("integration:events_queue", item)
+                            re_enqueued += 1
+                            
         # Check lengths
         q_len = 0
         dlq_len = 0
@@ -694,6 +727,7 @@ async def check_redis_integration_state():
         return {
             "redis_type": str(type(redis)),
             "is_mock": is_mock,
+            "re_enqueued_count": re_enqueued,
             "events_queue_length": q_len,
             "events_dlq_length": dlq_len,
             "events_queue_items": q_items,
