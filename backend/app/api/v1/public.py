@@ -58,7 +58,7 @@ async def public_list_jobs(
         await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
     stmt = select(Job).where(
         Job.tenant_id == t_uuid,
-        Job.status.in_(["PUBLISHED", "APPROVED", "DRAFT"])
+        Job.status == "PUBLISHED"
     ).order_by(Job.created_at.desc())
     result = await db.execute(stmt)
     jobs = result.scalars().all()
@@ -97,7 +97,11 @@ async def public_get_job(
     j_uuid = _uuid.UUID(job_id) if isinstance(job_id, str) else job_id
     if "sqlite" not in str(db.bind.url):
         await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
-    stmt = select(Job).where(Job.tenant_id == t_uuid, Job.id == j_uuid)
+    stmt = select(Job).where(
+        Job.tenant_id == t_uuid,
+        Job.id == j_uuid,
+        Job.status == "PUBLISHED"
+    )
     result = await db.execute(stmt)
     job = result.scalar_one_or_none()
     if not job:
