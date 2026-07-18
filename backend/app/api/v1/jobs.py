@@ -185,3 +185,59 @@ async def delete_job(
         return {"status": "success", "message": "Job deleted and sync request sent to VidyaMarg AI."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/redis-check", dependencies=[])
+async def check_redis_integration_state():
+    try:
+        from app.core.redis import get_redis
+        import json
+        redis = get_redis()
+        is_mock = "MockRedis" in str(type(redis))
+        
+        # Check lengths
+        q_len = 0
+        dlq_len = 0
+        q_items = []
+        dlq_items = []
+        
+        if is_mock:
+            data = getattr(redis, "_data", {})
+            q_list = data.get("integration:events_queue", [])
+            dlq_list = data.get("integration:events_dlq", [])
+            q_len = len(q_list)
+            dlq_len = len(dlq_list)
+            q_items = q_list[:10]
+            dlq_items = dlq_list[:10]
+        else:
+            q_len = await redis.llen("integration:events_queue")
+            dlq_len = await redis.llen("integration:events_dlq")
+            for i in range(min(10, q_len)):
+                item = await redis.lindex("integration:events_queue", i)
+                q_items.append(item)
+            for i in range(min(10, dlq_len)):
+                item = await redis.lindex("integration:events_dlq", i)
+                dlq_items.append(item)
+                
+        from app.services.integration_event import EventBusService
+        worker_status = "NONE"
+        if EventBusService._worker_task:
+            worker_status = "DONE" if EventBusService._worker_task.done() else "RUNNING"
+            if EventBusService._worker_task.done():
+                try:
+                    EventBusService._worker_task.result()
+                except Exception as ex:
+                    worker_status = f"CRASHED: {ex}"
+                    
+        return {
+            "redis_type": str(type(redis)),
+            "is_mock": is_mock,
+            "events_queue_length": q_len,
+            "events_dlq_length": dlq_len,
+            "events_queue_items": q_items,
+            "events_dlq_items": dlq_items,
+            "worker_task_status": worker_status,
+            "integration_service_url": settings.INTEGRATION_SERVICE_URL
+        }
+    except Exception as e:
+        return {"error": str(e)}
