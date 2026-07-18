@@ -37,15 +37,18 @@ class AuditService:
         user_agent: Optional[str] = None,
         status: str = "success",
     ) -> AuditLog:
-        """Write an audit log entry. Never raises — logs the error if it fails."""
-        try:
+            def _to_uuid(val):
+                if not val:
+                    return None
+                return val if isinstance(val, uuid.UUID) else uuid.UUID(str(val))
+
             entry = AuditLog(
-                tenant_id=uuid.UUID(tenant_id) if tenant_id else None,
-                actor_id=uuid.UUID(actor_id) if actor_id else None,
+                tenant_id=_to_uuid(tenant_id),
+                actor_id=_to_uuid(actor_id),
                 actor_type=actor_type,
                 action=action,
                 entity_type=entity_type,
-                entity_id=uuid.UUID(entity_id) if entity_id else None,
+                entity_id=_to_uuid(entity_id),
                 reason_code=reason_code,
                 reason_summary=reason_summary,
                 input_references=input_references,
