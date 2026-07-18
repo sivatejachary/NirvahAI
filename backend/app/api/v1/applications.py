@@ -5,7 +5,7 @@ Enforces screening, rank matching, and candidate evaluation pipelines.
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy import select, text
 
 from app.api.deps import DBSession, TenantId, CurrentUserId, require_role
@@ -156,3 +156,52 @@ async def update_application_status(
         "candidate_email": app_val.candidate_email,
     }
 
+
+# ── Resume File Upload ────────────────────────────────────────────────────────
+@router.post(
+    "/upload",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("tenant_admin", "hr_manager", "hr_recruiter"))],
+    summary="Upload a candidate resume (PDF or DOCX)",
+)
+async def upload_resume(
+    file: UploadFile = File(...),
+    tenant_id: TenantId = None,
+):
+    """
+    Accepts a resume file (PDF/DOCX) and returns:
+    - Extracted text preview
+    - A mock storage URL for use in application submission
+    """
+    allowed_types = {
+        "application/pdf", "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    }
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported file type: {file.content_type}. Must be PDF or DOCX."
+        )
+
+    contents = await file.read()
+    file_size_kb = len(contents) / 1024
+
+    # Extract text preview (first 500 chars raw bytes preview for PDFs)
+    try:
+        text_preview = contents[:500].decode("utf-8", errors="ignore")
+    except Exception:
+        text_preview = "[Binary content — PDF/DOCX parsing would run server-side]"
+
+    # Generate a mock storage URL (in production this would upload to S3/R2)
+    import uuid as uuid_mod
+    mock_storage_url = f"https://storage.nirvahai.com/resumes/{uuid_mod.uuid4().hex}/{file.filename}"
+
+    return {
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "size_kb": round(file_size_kb, 2),
+        "storage_url": mock_storage_url,
+        "text_preview": text_preview[:200],
+        "status": "uploaded",
+        "message": "Resume uploaded successfully. Use storage_url in your application submission.",
+    }

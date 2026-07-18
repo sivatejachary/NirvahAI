@@ -222,3 +222,26 @@ async def complete_onboarding_task(
     task.completed_at = datetime.utcnow()
     await db.flush()
     return task
+
+
+# ── Root alias so GET /onboarding returns plans list ─────────────────────────
+@router.get("", dependencies=[Depends(require_role("tenant_admin", "hr_manager", "hr_recruiter"))])
+async def list_onboarding_root(db: DBSession, tenant_id: TenantId):
+    """Alias: GET /onboarding → returns onboarding plans list."""
+    tid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    stmt = select(OnboardingPlan).where(OnboardingPlan.tenant_id == tid).order_by(OnboardingPlan.created_at.desc())
+    result = await db.execute(stmt)
+    plans = result.scalars().all()
+    return [
+        {
+            "id": str(p.id),
+            "employee_name": p.employee_name,
+            "employee_email": p.employee_email,
+            "department": p.department,
+            "status": p.status,
+            "start_date": p.start_date.isoformat() if p.start_date else None,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+        }
+        for p in plans
+    ]
+

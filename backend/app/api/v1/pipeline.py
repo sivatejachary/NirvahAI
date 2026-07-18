@@ -248,3 +248,28 @@ async def confirm_interview_attendance(
     await db.commit()
     return {"success": True, "confirmed": confirm}
 
+
+# ── /pipeline/selection — Candidates in final selection stage ─────────────────
+@router.get("/selection", dependencies=[Depends(require_role("tenant_admin", "hr_manager", "hr_recruiter", "hiring_manager"))])
+async def get_selection_pipeline(db: DBSession, tenant_id: TenantId):
+    """Returns candidates currently in MANAGER_INTERVIEW or FINAL_SELECTION stages."""
+    from app.models.application import Application
+    t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id
+    stmt = select(Application).where(
+        Application.tenant_id == t_uuid,
+        Application.status.in_(["MANAGER_INTERVIEW", "FINAL_SELECTION", "OFFER_EXTENDED", "HIRED"])
+    ).order_by(Application.updated_at.desc())
+    result = await db.execute(stmt)
+    apps = result.scalars().all()
+    return [
+        {
+            "id": str(a.id),
+            "job_id": str(a.job_id),
+            "candidate_name": a.candidate_name,
+            "candidate_email": a.candidate_email,
+            "status": a.status,
+            "fit_score": a.fit_score or 0.0,
+            "updated_at": a.updated_at.isoformat() if a.updated_at else None,
+        }
+        for a in apps
+    ]
