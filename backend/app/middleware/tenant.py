@@ -38,8 +38,10 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     and a security event is created.
     """
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Allow public paths, but resolve tenant_id from slug header or JWT token
+        if request.url.path == "/health":
+            return await call_next(request)
+
         is_public = self._is_public_path(request.url.path) or request.url.path.startswith("/api/v1/public/")
         if is_public:
             tenant_slug = request.headers.get("X-Tenant-Slug") or "dev-tenant"
