@@ -29,6 +29,7 @@ class EventCatalog:
     """Standard Event Catalog"""
     JOB_CREATED = "job.created"
     JOB_UPDATED = "job.updated"
+    JOB_PUBLISHED = "job.published"
     JOB_DELETED = "job.deleted"
 
     APPLICATION_CREATED = "application.created"

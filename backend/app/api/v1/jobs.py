@@ -167,6 +167,8 @@ async def publish_job(
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Job publish failed: {str(e)}")
 
 
 @router.delete("/{job_id}", dependencies=[Depends(require_role("tenant_admin", "hr_manager"))])
