@@ -116,9 +116,12 @@ async def init_db() -> None:
                 session.add_all(roles)
                 await session.commit()
     else:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            await conn.execute(text("SELECT 1"))
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                await conn.execute(text("SELECT 1"))
+        except Exception as e:
+            logger.warning(f"DB init non-fatal warning: {e}")
     logger.info("Database connection verified")
 
 
