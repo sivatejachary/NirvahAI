@@ -44,7 +44,16 @@ class ApplicationService:
         candidate_name: str,
         candidate_email: str,
         resume_text: str,
-        resume_url: Optional[str] = None
+        resume_url: Optional[str] = None,
+        phone: Optional[str] = None,
+        skills: Optional[List[str]] = None,
+        experience_years: Optional[float] = None,
+        education: Optional[List[Dict[str, Any]]] = None,
+        match_score: Optional[float] = None,
+        portfolio_url: Optional[str] = None,
+        github_url: Optional[str] = None,
+        linkedin_url: Optional[str] = None,
+        vidyamargai_candidate_id: Optional[str] = None
     ) -> Application:
         """
         Ingests a job application. Enforces consent checks, executes blind parsing,
@@ -71,19 +80,30 @@ class ApplicationService:
             if not consent:
                 raise ValueError("Strict candidate consent check failed. Applicant has not signed AI consent form.")
                 
-        # 2. Extract demographics-blind resume profile via LLM Gateway
-        parsed_res = await LLMGateway.call_llm(
-            db=db,
-            tenant_id=tenant_id,
-            prompt_name="resume_parse",
-            variables={"resume_text": resume_text},
-            purpose="resume_parsing"
-        )
-        
-        try:
-            profile_data = json.loads(parsed_res)
-        except Exception:
-            profile_data = {"skills": [], "experience_years": 0.0}
+        # 2. Extract demographics-blind resume profile via LLM Gateway if not provided
+        if skills or experience_years is not None:
+            profile_data = {
+                "skills": skills or [],
+                "experience_years": experience_years or 0.0,
+                "education": education or [],
+                "phone": phone,
+                "portfolio_url": portfolio_url,
+                "github_url": github_url,
+                "linkedin_url": linkedin_url
+            }
+        else:
+            parsed_res = await LLMGateway.call_llm(
+                db=db,
+                tenant_id=tenant_id,
+                prompt_name="resume_parse",
+                variables={"resume_text": resume_text},
+                purpose="resume_parsing"
+            )
+            
+            try:
+                profile_data = json.loads(parsed_res)
+            except Exception:
+                profile_data = {"skills": [], "experience_years": 0.0}
             
         # 3. Load Job details for matching
         stmt = select(Job).where(Job.tenant_id == t_uuid, Job.id == j_uuid)
@@ -91,27 +111,32 @@ class ApplicationService:
         if not job:
             raise ValueError("Target job posting does not exist under this tenant.")
             
-        # 4. Grade Candidate Fit via Gateway Matcher
-        match_res = await LLMGateway.call_llm(
-            db=db,
-            tenant_id=tenant_id,
-            prompt_name="candidate_match",
-            variables={
-                "job_requirements": ", ".join(job.requirements or []),
-                "candidate_profile": json.dumps(profile_data)
-            },
-            purpose="candidate_matching"
-        )
-        
-        try:
-            match_data = json.loads(match_res)
-            fit_score = float(match_data.get("fit_score", 50.0))
-            reasoning = match_data.get("reasoning", "Parsed match result.")
-            initial_status = match_data.get("status", "MCQ_STAGE")
-        except Exception:
-            fit_score = 50.0
-            reasoning = "Failed to parse grade results. Defaulted to fallback scoring."
+        # 4. Grade Candidate Fit (use provided match_score from VidyaMarg or fallback to Gateway Matcher)
+        if match_score is not None:
+            fit_score = float(match_score)
+            reasoning = f"Evaluated match score from VidyaMarg AI: {fit_score}%."
             initial_status = "MCQ_STAGE"
+        else:
+            match_res = await LLMGateway.call_llm(
+                db=db,
+                tenant_id=tenant_id,
+                prompt_name="candidate_match",
+                variables={
+                    "job_requirements": ", ".join(job.requirements or []),
+                    "candidate_profile": json.dumps(profile_data)
+                },
+                purpose="candidate_matching"
+            )
+            
+            try:
+                match_data = json.loads(match_res)
+                fit_score = float(match_data.get("fit_score", 50.0))
+                reasoning = match_data.get("reasoning", "Parsed match result.")
+                initial_status = match_data.get("status", "MCQ_STAGE")
+            except Exception:
+                fit_score = 50.0
+                reasoning = "Failed to parse grade results. Defaulted to fallback scoring."
+                initial_status = "MCQ_STAGE"
             
         # 5. Create Application entry
         application = Application(
@@ -127,6 +152,22 @@ class ApplicationService:
         )
         db.add(application)
         await db.flush()
+
+        # Save VidyaMarg bridge entry if candidate_id provided
+        if vidyamargai_candidate_id:
+            try:
+                from app.models.vidyamarg import VidyamargaiSync
+                sync = VidyamargaiSync(
+                    tenant_id=t_uuid,
+                    application_id=application.id,
+                    job_id=j_uuid,
+                    vidyamargai_candidate_id=str(vidyamargai_candidate_id),
+                    sync_status="ACTIVE"
+                )
+                db.add(sync)
+                await db.flush()
+            except Exception as e:
+                logger.warning("VIDYAMARGAI_SYNC_SAVE_FAILED", error=str(e))
         
         # 6. Start Recruitment Workflow Instance tracker (Temporal Mock)
         await WorkflowService.start_recruitment_workflow(

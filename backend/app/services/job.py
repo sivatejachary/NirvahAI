@@ -177,16 +177,20 @@ class JobService:
         job.updated_at = datetime.now(timezone.utc)
         await db.flush()
         
-        audit = AuditService(db)
-        await audit.log(
-            tenant_id=tenant_id,
-            action="job.published",
-            actor_type="user",
-            actor_id=user_id,
-            entity_type="job",
-            entity_id=str(job.id),
-            reason_code="JOB_PUBLISHED",
-            reason_summary=f"Job {job.title} published to channels: {', '.join(channels)}"
+        # Publish job.published event via Integration Service Event Bus
+        from app.services.integration_event import EventBusService, EventCatalog
+        await EventBusService.publish_event(
+            event_type=EventCatalog.JOB_PUBLISHED,
+            company_id=tenant_id,
+            job_id=str(job.id),
+            payload={
+                "job_id": str(job.id),
+                "title": job.title,
+                "description": job.description,
+                "requirements": job.requirements,
+                "status": job.status,
+                "sourcing_channels": channels_state
+            }
         )
         return job
 
@@ -217,14 +221,15 @@ class JobService:
             reason_summary=f"Job posting deleted: {job_id}"
         )
         
-        import httpx
-        from app.services.pipeline import VIDYAMARGAI_SYNC_URL
+        from app.services.integration_event import EventBusService, EventCatalog
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.delete(
-                    f"{VIDYAMARGAI_SYNC_URL}/sync/jobs/{job_id}"
-                )
+            await EventBusService.publish_event(
+                event_type=EventCatalog.JOB_DELETED,
+                company_id=tenant_id,
+                job_id=str(job_id),
+                payload={"job_id": str(job_id)}
+            )
         except Exception as e:
-            logger.warning("VIDYAMARGAI_JOB_SYNC_DELETE_FAILED", error=str(e))
+            logger.warning("VIDYAMARGAI_JOB_EVENT_DELETE_FAILED", error=str(e))
             
         return True

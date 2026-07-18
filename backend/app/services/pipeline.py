@@ -267,11 +267,29 @@ class PipelineService:
     async def _sync_to_vidyamargai(application_id: str, stage_number: int, stage_name: str,
                                     status: str, score: Optional[float] = None, feedback: Optional[str] = None):
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.post(
-                    f"{VIDYAMARGAI_SYNC_URL}/sync/stages",
-                    json={"application_id": str(application_id), "stage_number": stage_number,
-                          "stage_name": stage_name, "status": status, "score": score, "feedback": feedback}
-                )
+            from app.services.integration_event import EventBusService, EventCatalog
+            
+            # Map stage status to standardized Event Catalog event type
+            event_type = EventCatalog.STAGE_UPDATED
+            if status == "PASSED" and stage_number >= 11:
+                event_type = EventCatalog.CANDIDATE_OFFERED
+            elif status == "PASSED" and stage_number == 15:
+                event_type = EventCatalog.CANDIDATE_HIRED
+            elif status == "FAILED":
+                event_type = EventCatalog.CANDIDATE_REJECTED
+
+            await EventBusService.publish_event(
+                event_type=event_type,
+                company_id="system",
+                application_id=str(application_id),
+                payload={
+                    "application_id": str(application_id),
+                    "stage_number": stage_number,
+                    "stage_name": stage_name,
+                    "status": status,
+                    "score": score,
+                    "feedback": feedback
+                }
+            )
         except Exception as e:
-            logger.warning("VIDYAMARGAI_SYNC_FAILED", error=str(e))
+            logger.warning("VIDYAMARGAI_EVENT_PUBLISH_FAILED", error=str(e))

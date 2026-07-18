@@ -22,10 +22,19 @@ router = APIRouter(prefix="/public", tags=["Public Candidate Portal"])
 
 class ApplicationIngest(BaseModel):
     job_id: str
+    candidate_id: Optional[str] = None
     candidate_name: str
     candidate_email: EmailStr
+    phone: Optional[str] = None
     resume_text: str
     resume_url: Optional[str] = None
+    skills: Optional[List[str]] = None
+    experience_years: Optional[float] = None
+    education: Optional[List[Dict[str, Any]]] = None
+    match_score: Optional[float] = None
+    portfolio_url: Optional[str] = None
+    github_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
     gdpr_consent: bool = False  # When True, auto-records consent so candidate does not need a prior consent step
 
 
@@ -183,8 +192,34 @@ async def public_submit_application(
             candidate_name=body.candidate_name,
             candidate_email=body.candidate_email,
             resume_text=body.resume_text,
-            resume_url=body.resume_url
+            resume_url=body.resume_url,
+            phone=body.phone,
+            skills=body.skills,
+            experience_years=body.experience_years,
+            education=body.education,
+            match_score=body.match_score,
+            portfolio_url=body.portfolio_url,
+            github_url=body.github_url,
+            linkedin_url=body.linkedin_url,
+            vidyamargai_candidate_id=body.candidate_id
         )
+
+        from app.services.integration_event import EventBusService, EventCatalog
+        await EventBusService.publish_event(
+            event_type=EventCatalog.APPLICATION_CREATED,
+            company_id=tenant_id,
+            job_id=body.job_id,
+            application_id=str(application.id),
+            payload={
+                "application_id": str(application.id),
+                "job_id": body.job_id,
+                "candidate_name": body.candidate_name,
+                "candidate_email": body.candidate_email,
+                "fit_score": getattr(application, "fit_score", 50.0),
+                "status": getattr(application, "status", "APPLIED")
+            }
+        )
+
         return application
     except ValueError as e:
         raise HTTPException(
