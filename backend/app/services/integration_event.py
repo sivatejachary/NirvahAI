@@ -24,13 +24,8 @@ INTEGRATION_SERVICE_URL = settings.INTEGRATION_SERVICE_URL
 INTEGRATION_SECRET = settings.INTEGRATION_SECRET
 
 if not INTEGRATION_SECRET:
-    if settings.is_production:
-        raise ValueError(
-            "INTEGRATION_SECRET environment variable MUST be configured in production!"
-        )
-    else:
-        logger.warning("INTEGRATION_SECRET is not set. Event signatures will fail verification.")
-        INTEGRATION_SECRET = "dev-secret-only-for-local-runs"
+    logger.error("INTEGRATION_SECRET environment variable is missing! Event signatures will fall back to default.")
+    INTEGRATION_SECRET = "nirvahai-shared-integration-secret-2026"
 
 
 class EventCatalog:

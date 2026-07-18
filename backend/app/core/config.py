@@ -4,7 +4,7 @@ Loaded from environment variables using pydantic-settings.
 """
 import json
 from functools import lru_cache
-from typing import Any, List
+from typing import Any, List, Optional
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
