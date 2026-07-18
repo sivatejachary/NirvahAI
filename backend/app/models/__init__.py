@@ -5,7 +5,7 @@ from app.models.company import Team, PolicyDocument, PolicyVersion, CompanyInteg
 from app.models.compliance import ComplianceProfile, ConsentRecord, AccommodationRequest, PrivacyRequest
 from app.models.ai import AIUsageLog
 from app.models.workflow import WorkflowInstance
-from app.models.job import Job
+from app.models.job import Job, JobSkill
 from app.models.application import Application
 from app.models.assessment import JobMCQ, AssessmentAttempt, ProctoringLog
 from app.models.challenge import CodingChallenge, CodingSubmission

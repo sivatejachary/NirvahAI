@@ -52,6 +52,28 @@ class Job(Base, TenantMixin, TimestampMixin):
     employment_type: Mapped[Optional[str]] = mapped_column(String(50), default="FULL_TIME", nullable=True)
     location_type: Mapped[Optional[str]] = mapped_column(String(50), default="REMOTE", nullable=True)
     salary_min: Mapped[Optional[int]] = mapped_column(nullable=True)
-    salary_max: Mapped[Optional[int]] = mapped_column(nullable=True)
     currency: Mapped[Optional[str]] = mapped_column(String(10), default="USD", nullable=True)
+
+
+class JobSkill(Base):
+    """
+    Structured skill requirement breakdown for a job posting.
+    Allows weighted candidate skill matching.
+    """
+    __tablename__ = "job_skills"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
+        server_default=text("gen_random_uuid()")
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    skill_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    is_required: Mapped[bool] = mapped_column(default=True)
+    importance_weight: Mapped[float] = mapped_column(default=1.0)
+
 
