@@ -37,11 +37,12 @@ class AuditService:
         user_agent: Optional[str] = None,
         status: str = "success",
     ) -> AuditLog:
-            def _to_uuid(val):
-                if not val:
-                    return None
-                return val if isinstance(val, uuid.UUID) else uuid.UUID(str(val))
+        def _to_uuid(val):
+            if not val:
+                return None
+            return val if isinstance(val, uuid.UUID) else uuid.UUID(str(val))
 
+        try:
             entry = AuditLog(
                 tenant_id=_to_uuid(tenant_id),
                 actor_id=_to_uuid(actor_id),
