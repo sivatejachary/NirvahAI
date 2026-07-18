@@ -105,10 +105,14 @@ def create_application() -> FastAPI:
             content={"detail": "An internal error occurred. It has been logged."},
         )
 
-    # ── Health Check ──────────────────────────────────────────────────────────
     @app.get("/health", tags=["System"])
     async def health():
-        return {"status": "ok", "service": "hros-api", "version": "1.0.0"}
+        return {
+            "status": "ok",
+            "service": "hros-api",
+            "version": "1.0.0",
+            "allowed_origins": settings.ALLOWED_ORIGINS
+        }
 
     # ── Docs Redirect ─────────────────────────────────────────────────────────
     @app.get("/docs", include_in_schema=False)
