@@ -6,10 +6,47 @@ Tenant context is resolved from the X-Tenant-Slug header.
 import uuid
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr
-
-from fastapi import APIRouter, Depends, HTTPException, status
-
+import hmac
+import hashlib
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from app.api.deps import DBSession, TenantId
+from app.core.config import settings
+
+async def verify_integration_signature(
+    request: Request,
+    x_event_signature: Optional[str] = Header(None, alias="X-Event-Signature")
+):
+    secret = settings.INTEGRATION_SECRET
+    if not secret:
+        raise HTTPException(
+            status_code=500,
+            detail="INTEGRATION_SECRET environment variable is not configured."
+        )
+
+    if not x_event_signature:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing X-Event-Signature header."
+        )
+
+    body = await request.body()
+    computed = hmac.new(
+        secret.encode("utf-8"),
+        body,
+        hashlib.sha256
+    ).hexdigest()
+
+    computed_stripped = hmac.new(
+        secret.encode("utf-8"),
+        body.strip(),
+        hashlib.sha256
+    ).hexdigest()
+
+    if not (hmac.compare_digest(computed, x_event_signature) or hmac.compare_digest(computed_stripped, x_event_signature)):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid event signature."
+        )
 from app.services.application import ApplicationService
 from app.services.assessment import AssessmentService
 from app.services import compliance as compliance_svc
@@ -221,6 +258,83 @@ async def public_submit_application(
         )
 
         return application
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/applications/sync", status_code=status.HTTP_201_CREATED, dependencies=[Depends(verify_integration_signature)])
+async def public_sync_application(
+    db: DBSession,
+    tenant_id: TenantId,
+    body: ApplicationIngest
+):
+    """
+    Service-to-service candidate ingestion endpoint for VidyamargAI sync.
+    Verifies HMAC signatures and auto-records GDPR consent.
+    """
+    try:
+        from sqlalchemy import text
+        if "sqlite" not in str(db.bind.url):
+            await db.execute(text("SET LOCAL app.bypass_rls = 'true'"))
+
+        # Auto-record consent
+        candidate_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, str(body.candidate_email))
+        await compliance_svc.log_consent(
+            db,
+            tenant_id=tenant_id,
+            candidate_id=str(candidate_uuid),
+            workflow_stage="APPLICATION",
+            consent_status=True,
+            consent_method="AUTO_APPLY",
+            verification_metadata={"source": "VidyamargAI synced application"},
+        )
+
+        application = await ApplicationService.submit_application(
+            db=db,
+            tenant_id=tenant_id,
+            job_id=body.job_id,
+            candidate_name=body.candidate_name,
+            candidate_email=body.candidate_email,
+            resume_text=body.resume_text,
+            resume_url=body.resume_url,
+            phone=body.phone,
+            skills=body.skills,
+            experience_years=body.experience_years,
+            education=body.education,
+            match_score=body.match_score,
+            portfolio_url=body.portfolio_url,
+            github_url=body.github_url,
+            linkedin_url=body.linkedin_url,
+            vidyamargai_candidate_id=body.candidate_id
+        )
+
+        # Publish integration event for application creation
+        from app.services.integration_event import EventBusService, EventCatalog
+        await EventBusService.publish_event(
+            event_type=EventCatalog.APPLICATION_CREATED,
+            company_id=tenant_id,
+            job_id=body.job_id,
+            application_id=str(application.id),
+            payload={
+                "application_id": str(application.id),
+                "job_id": body.job_id,
+                "candidate_name": body.candidate_name,
+                "candidate_email": body.candidate_email,
+                "fit_score": getattr(application, "fit_score", 50.0),
+                "status": getattr(application, "status", "APPLIED")
+            }
+        )
+
+        return {
+            "id": str(application.id),
+            "status": application.status,
+            "fit_score": application.fit_score,
+            "screening_feedback": application.screening_feedback
+        }
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -20,9 +20,17 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Integration Service & Webhook target endpoints
-INTEGRATION_SERVICE_URL = getattr(settings, "INTEGRATION_SERVICE_URL", "https://vidyamargai-production-1fc2.up.railway.app/api/v1/events")
-INTEGRATION_SECRET = getattr(settings, "INTEGRATION_SECRET", "nirvahai-shared-integration-secret-2026")
+INTEGRATION_SERVICE_URL = settings.INTEGRATION_SERVICE_URL
+INTEGRATION_SECRET = settings.INTEGRATION_SECRET
+
+if not INTEGRATION_SECRET:
+    if settings.is_production:
+        raise ValueError(
+            "INTEGRATION_SECRET environment variable MUST be configured in production!"
+        )
+    else:
+        logger.warning("INTEGRATION_SECRET is not set. Event signatures will fail verification.")
+        INTEGRATION_SECRET = "dev-secret-only-for-local-runs"
 
 
 class EventCatalog:

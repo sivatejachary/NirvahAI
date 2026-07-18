@@ -169,6 +169,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
     PUBLIC_RATE_LIMIT_PER_MINUTE: int = 20
 
+    # ── Integration ──────────────────────────────────────────────────────────
+    INTEGRATION_SECRET: Optional[str] = None
+    INTEGRATION_SERVICE_URL: str = "https://vidyamargai-production-1fc2.up.railway.app/api/v1/events"
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"
