@@ -657,6 +657,9 @@ async def check_redis_integration_state(action: Optional[str] = None):
         redis = get_redis()
         is_mock = "MockRedis" in str(type(redis))
         
+        # Import signing function
+        from app.services.integration_event import compute_hmac_signature
+        
         re_enqueued = 0
         if action == "retry":
             if is_mock:
@@ -666,6 +669,9 @@ async def check_redis_integration_state(action: Optional[str] = None):
                 for item in dlq:
                     try:
                         event_data = json.loads(item)
+                        envelope = event_data["envelope"]
+                        payload_str = json.dumps(envelope, separators=(',', ':'))
+                        event_data["signature"] = compute_hmac_signature(payload_str)
                         event_data["retry_count"] = 0
                         queue.append(json.dumps(event_data))
                         re_enqueued += 1
@@ -673,22 +679,34 @@ async def check_redis_integration_state(action: Optional[str] = None):
                         pass
                 data["integration:events_dlq"] = []
             else:
+                # First, pop any failed items currently in the main queue to re-sign them too!
+                q_len = await redis.llen("integration:events_queue")
+                items_to_resign = []
+                for _ in range(q_len):
+                    item = await redis.lpop("integration:events_queue")
+                    if item:
+                        items_to_resign.append(item)
+                        
                 dlq_len = await redis.llen("integration:events_dlq")
                 for _ in range(dlq_len):
                     item = await redis.lpop("integration:events_dlq")
                     if item:
-                        try:
-                            # If it was returned as bytes, decode it
-                            if isinstance(item, bytes):
-                                item = item.decode("utf-8")
-                            event_data = json.loads(item)
-                            event_data["retry_count"] = 0
-                            await redis.rpush("integration:events_queue", json.dumps(event_data))
-                            re_enqueued += 1
-                        except Exception:
-                            # Fallback re-enqueue raw
-                            await redis.rpush("integration:events_queue", item)
-                            re_enqueued += 1
+                        items_to_resign.append(item)
+                        
+                for item in items_to_resign:
+                    try:
+                        if isinstance(item, bytes):
+                            item = item.decode("utf-8")
+                        event_data = json.loads(item)
+                        envelope = event_data["envelope"]
+                        payload_str = json.dumps(envelope, separators=(',', ':'))
+                        event_data["signature"] = compute_hmac_signature(payload_str)
+                        event_data["retry_count"] = 0
+                        await redis.rpush("integration:events_queue", json.dumps(event_data))
+                        re_enqueued += 1
+                    except Exception:
+                        await redis.rpush("integration:events_queue", item)
+                        re_enqueued += 1
                             
         # Check lengths
         q_len = 0
