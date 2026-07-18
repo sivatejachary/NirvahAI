@@ -181,7 +181,7 @@ class JobService:
         from app.services.integration_event import EventBusService, EventCatalog
         await EventBusService.publish_event(
             event_type=EventCatalog.JOB_PUBLISHED,
-            company_id=tenant_id,
+            company_id=str(tenant_id),
             job_id=str(job.id),
             payload={
                 "job_id": str(job.id),
