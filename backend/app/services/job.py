@@ -159,13 +159,14 @@ class JobService:
             
         # Get tenant slug for referral URLs
         tenant_stmt = select(Tenant).where(Tenant.id == job.tenant_id)
-        tenant = (await db.execute(tenant_stmt)).scalar_one()
+        tenant = (await db.execute(tenant_stmt)).scalar_one_or_none()
+        slug = tenant.company_slug if tenant else "dev-tenant"
         
         # Simulate API sourcing distribution
         channels_state = {}
         for chan in channels:
             # Create a unique referral tracker URL for this sourcing channel
-            referral_url = f"http://localhost:3000/portal?tenant={tenant.company_slug}&job={job.id}&channel={chan}"
+            referral_url = f"http://localhost:3000/portal?tenant={slug}&job={job.id}&channel={chan}"
             channels_state[chan] = {
                 "status": "PUBLISHED",
                 "published_at": datetime.now(timezone.utc).isoformat(),
