@@ -102,17 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* VidyaMarg Banner */}
-        {!collapsed && (
-          <div style={{ margin: '4px 10px 8px', padding: '12px 13px', background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(99,102,241,0.1))', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 12, flexShrink: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5 }}>🎓 VidyaMarg AI</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 9, lineHeight: 1.5 }}>Candidates apply from VidyaMarg AI portal</div>
-            <a href="https://vidyamarg-ai.vercel.app/candidate/job-agent" target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', textAlign: 'center', padding: '7px 0', background: 'linear-gradient(135deg, #7c3aed, #6366f1)', borderRadius: 8, color: '#fff', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
-              Open Candidate Portal →
-            </a>
-          </div>
-        )}
+
 
         {/* User Footer */}
         <div style={{ padding: '10px 10px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
